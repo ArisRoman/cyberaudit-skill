@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
+const PKG = JSON.parse(readFileSync(join(PKG_ROOT, "package.json"), "utf-8"));
 const SKILL_SRC = join(PKG_ROOT, "skills", "cyberaudit");
 
 type Agent = "opencode" | "claude-code" | "kiro" | "cursor" | "gemini" | "antigravity" | "antigravity-cli";
@@ -121,7 +122,7 @@ async function main() {
   program
     .name("cyberaudit-skill")
     .description("CyberAudit Skill — universal security audit skill for AI agents")
-    .version("3.1.0");
+    .version(PKG.version);
 
   program
     .command("install")

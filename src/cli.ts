@@ -121,7 +121,7 @@ async function main() {
   program
     .name("cyberaudit-skill")
     .description("CyberAudit Skill — universal security audit skill for AI agents")
-    .version("3.0.0");
+    .version("3.1.0");
 
   program
     .command("install")

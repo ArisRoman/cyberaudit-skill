@@ -11,26 +11,31 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
 const SKILL_SRC = join(PKG_ROOT, "skills", "cyberaudit");
 
-type Agent = "opencode" | "claude-code" | "kiro" | "cursor" | "gemini";
+type Agent = "opencode" | "claude-code" | "kiro" | "cursor" | "gemini" | "antigravity" | "antigravity-cli";
 
 const AGENT_TARGETS: Record<Agent, string[]> = {
-  "opencode":   [join(homedir(), ".agents", "skills", "cyberaudit")],
-  "claude-code": [join(homedir(), ".claude", "skills", "cyberaudit")],
-  "kiro":       [join(homedir(), ".kiro", "skills", "cyberaudit")],
-  "cursor":     [join(homedir(), ".cursor", "mcp.json")],
-  "gemini":     [join(homedir(), ".gemini", "skills", "cyberaudit")],
+  "opencode":        [join(homedir(), ".agents", "skills", "cyberaudit")],
+  "claude-code":     [join(homedir(), ".claude", "skills", "cyberaudit")],
+  "kiro":            [join(homedir(), ".kiro", "skills", "cyberaudit")],
+  "cursor":          [join(homedir(), ".cursor", "mcp.json")],
+  "gemini":          [join(homedir(), ".gemini", "skills", "cyberaudit")],
+  "antigravity":     [join(homedir(), ".gemini", "antigravity", "skills", "cyberaudit")],
+  "antigravity-cli": [join(homedir(), ".gemini", "antigravity-cli", "skills", "cyberaudit")],
 };
 
 function detectInstalledAgents(): Agent[] {
   const found: Agent[] = [];
+  const skipDetection = new Set(["cursor", "gemini", "antigravity", "antigravity-cli"]);
   for (const [agent, paths] of Object.entries(AGENT_TARGETS)) {
-    if (agent === "cursor" || agent === "gemini") continue;
+    if (skipDetection.has(agent)) continue;
     if (paths.some((p) => existsSync(dirname(p)))) {
       found.push(agent as Agent);
     }
   }
   if (existsSync(join(homedir(), ".cursor"))) found.push("cursor");
   if (existsSync(join(homedir(), ".gemini"))) found.push("gemini");
+  if (existsSync(join(homedir(), ".gemini", "antigravity"))) found.push("antigravity");
+  if (existsSync(join(homedir(), ".gemini", "antigravity-cli"))) found.push("antigravity-cli");
   return found;
 }
 
@@ -128,7 +133,7 @@ async function main() {
           process.exit(1);
         }
       } else {
-        const valid: Agent[] = ["opencode", "claude-code", "kiro", "cursor", "gemini"];
+        const valid: Agent[] = ["opencode", "claude-code", "kiro", "cursor", "gemini", "antigravity", "antigravity-cli"];
         if (!valid.includes(agentOpt as Agent)) {
           console.error(`Unknown agent: "${agentOpt}". Valid: ${valid.join(", ")}`);
           process.exit(1);

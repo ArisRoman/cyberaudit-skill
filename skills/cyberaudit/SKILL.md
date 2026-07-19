@@ -5,7 +5,7 @@ description: >
   Use when auditing source code for vulnerabilities — full methodology from
   quick scan to red team. Follows OWASP Top 10 2023, CVSS 3.1, ASVS 4.0.
   Trigger: "audit", "security", "vulnerability", "pentest", "OWASP",
-  "scan my code", "security review".
+  "scan my code", "security review", "commands", "help".
 compatibility: Pure Markdown skill, no external dependencies. Works with any AI agent that loads SKILL.md.
 metadata:
   author: ArisRoman
@@ -13,9 +13,71 @@ metadata:
   allowed-tools: Read Edit Grep Glob Bash
 ---
 
-# CyberAudit Skill v3.0 — LUNAIRE EDITION
+# CyberAudit Skill
 
 Security audit intelligence for AI agents. Universal, framework-agnostic, methodology-driven.
+
+## Available Commands
+
+### Global
+| Command | Action |
+|---|---|
+| `/audit` | Full audit (auto-detect web/mobile) |
+| `/audit:quick` | Quick scan — criticals only |
+| `/audit:report` | Generate full report |
+| `/audit:exec` | Generate executive summary |
+
+### Web
+| Command | Action |
+|---|---|
+| `/audit:web` | Full web audit (OWASP Top 10) |
+| `/audit:auth` | Authentication & Authorization |
+| `/audit:injection` | SQL, NoSQL, Command, SSTI |
+| `/audit:xss` | Cross-Site Scripting |
+| `/audit:csrf` | Cross-Site Request Forgery |
+| `/audit:cors` | CORS configuration |
+| `/audit:headers` | HTTP security headers |
+| `/audit:secrets` | Exposed secrets & credentials |
+| `/audit:deps` | Dependencies & supply chain |
+| `/audit:ssrf` | Server-Side Request Forgery |
+| `/audit:idor` | IDOR & access control |
+| `/audit:logic` | Business logic flaws |
+| `/audit:crypto` | Web cryptography |
+| `/audit:xxe` | XML External Entities |
+| `/audit:deserial` | Insecure deserialization |
+| `/audit:laravel` | Laravel-specific audit |
+| `/audit:nextjs` | Next.js-specific audit |
+| `/audit:react` | React-specific audit |
+| `/audit:nestjs` | NestJS-specific audit |
+| `/audit:express` | Express-specific audit |
+| `/audit:vue` | Vue.js-specific audit |
+| `/audit:angular` | Angular-specific audit |
+
+### Mobile
+| Command | Action |
+|---|---|
+| `/audit:mobile` | Full mobile audit (OWASP MASVS) |
+| `/audit:storage` | Local storage security |
+| `/audit:network` | Network security |
+| `/audit:binary` | Binary analysis |
+| `/audit:permissions` | Permissions audit |
+| `/audit:deeplinks` | Deep links & IPC |
+| `/audit:auth-mobile` | Mobile authentication |
+| `/audit:crypto-mobile` | Mobile cryptography |
+| `/audit:runtime` | Runtime security |
+| `/audit:react-native` | React Native audit |
+| `/audit:flutter` | Flutter audit |
+| `/audit:ionic` | Ionic audit |
+| `/audit:expo` | Expo audit |
+
+### Compliance
+| Command | Action |
+|---|---|
+| `/audit:rgpd` | RGPD compliance check |
+| `/audit:pci` | PCI-DSS compliance check |
+| `/audit:hipaa` | HIPAA compliance check |
+| `/audit:masvs` | MASVS 2.0 score |
+| `/audit:owasp` | OWASP Top 10 score |
 
 ## Boot Sequence
 

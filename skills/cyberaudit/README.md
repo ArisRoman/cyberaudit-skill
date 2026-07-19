@@ -1,154 +1,44 @@
-# 🛡️ CyberAudit Skill — LUNAIRE EDITION
+# CyberAudit Skill
 
-**Version 3.0.0** · Pure Markdown · Universal Security Intelligence · Zero dependency
+Security audit intelligence for AI agents. Pure Markdown, zero dependencies.
 
-[![OWASP](https://img.shields.io/badge/OWASP_Top_10-2021-blue)](#)
-[![MASVS](https://img.shields.io/badge/OWASP_MASVS-2.0-green)](#)
-[![CVSS](https://img.shields.io/badge/CVSS-3.1-orange)](#)
-[![Frameworks](https://img.shields.io/badge/Frameworks-11-purple)](#)
-[![Files](https://img.shields.io/badge/Files-52-lightgrey)](#)
+## Coverage
 
----
-
-## 📋 Description
-
-CyberAudit Skill turns any AI agent (Cursor, Claude, GPT, Copilot) into an OSCP/OSCE-level **security expert**.
-
-52 Markdown files encoding 15 years of real pentesting, security architecture, and vulnerability research. The agent doesn't scan — it **thinks**, **contextualizes**, and **prioritizes** like a human.
-
-> *"I don't look for vulnerabilities to destroy. I look for vulnerabilities to protect."*
-
----
-
-## ✨ Features
-
-| Domain | Coverage |
+| Domain | Detail |
 |---|---|
-| **Web** | 7 frameworks, 13 vulnerability types, threat modeling, remediation |
-| **Mobile** | 4 frameworks, 8 vulnerability types, MASVS 2.0 aligned |
-| **Scoring** | Full CVSS 3.1 with aggravating/mitigating context factors |
-| **Compliance** | RGPD, PCI-DSS, HIPAA, SOC 2 — built-in checklists |
+| **Web** | 7 frameworks (React, Next.js, Laravel, NestJS, Express, Vue, Angular), 13 vulnerability types |
+| **Mobile** | 4 frameworks (React Native, Flutter, Ionic, Expo), 8 vulnerability types |
+| **Scoring** | CVSS 3.1 with aggravating/mitigating context factors |
+| **Compliance** | RGPD, PCI-DSS, HIPAA, SOC 2 |
 | **Reports** | Web + Mobile + Executive Summary templates |
-| **Levels** | Quick Scan → Standard → Deep → Red Team |
 
----
-
-## 🏗️ Architecture
+## Files
 
 ```
-cyberaudit-skill/
-├── AGENT-BOOT.md · MASTER.md · USAGE-GUIDE.md
-├── INSTALL.md · COMMANDS.md
-│
-├── web/
-│   ├── WEB-PHILOSOPHY.md · WEB-CHECKLIST.md
-│   ├── WEB-THREAT-MODELS.md · WEB-REMEDIATION-LIBRARY.md
-│   ├── frameworks/  (React, Next.js, Laravel, NestJS, Express, Vue, Angular)
-│   └── vulnerabilities/  (Injection, XSS, CSRF, IDOR, SSRF, XXE…)
-│
-├── mobile/
-│   ├── MOBILE-PHILOSOPHY.md · MOBILE-CHECKLIST.md
-│   ├── MOBILE-THREAT-MODELS.md · MOBILE-REMEDIATION-LIBRARY.md
-│   ├── frameworks/  (React Native, Flutter, Ionic, Expo)
-│   └── vulnerabilities/  (Storage, Network, Binary, Permissions, IPC…)
-│
-├── shared/
-│   ├── SEVERITY-SCORING.md · CVSS-GUIDE.md
-│   ├── OWASP-MAPPER.md · THREAT-MODELING.md
-│   └── COMPLIANCE.md
-│
-└── reports/
-    ├── REPORT-TEMPLATE-WEB.md
-    ├── REPORT-TEMPLATE-MOBILE.md
-    └── EXECUTIVE-SUMMARY-TEMPLATE.md
+AGENT-BOOT.md      Boot sequence, oath, audit levels
+SKILL.md           Main intelligence, taxonomy, rules
+COMMANDS.md        Operational commands
+USAGE-GUIDE.md     User-facing guide
+MASTER.md          Full vulnerability taxonomy + scoring
+web/               Web audit checklists, per-framework guides
+mobile/            Mobile audit checklists, per-framework guides
+shared/            Scoring, CVSS, OWASP mapping, compliance
+reports/           Report templates (web, mobile, executive)
 ```
 
-**52 files, 100% Markdown, zero dependency.**
+## Audit Levels
 
----
+- **Quick Scan** (15-30 min): Secrets, critical CVEs, auth bypass
+- **Standard** (1-2h): Full auth, inputs, config, dependencies
+- **Deep** (3-5h): Threat modeling, business logic, architecture
+- **Red Team** (on request): Kill chains, full exploitation
 
-## 🚀 Quick Start
+## Install
 
 ```bash
-# 1. Clone the skill into your project
-git clone https://github.com/your-account/cyberaudit-skill .skills/cyberaudit
-
-# 2. Point your AI agent to the boot
-# Simply say:
-"Load .skills/cyberaudit/AGENT-BOOT.md and audit this project"
+npx -y cyberaudit-skill install
 ```
 
-**Detailed installation → [INSTALL.md](./INSTALL.md)**
+## License
 
----
-
-## 🎯 Audit Levels
-
-| Level | Duration | Scope | Output |
-|---|---|---|---|
-| **1 — Quick Scan** | 15-30 min | Secrets, critical CVEs, auth bypass | Critical + high list |
-| **2 — Standard** | 1-2h | All level 1 + full auth, user inputs, config | All-levels report |
-| **3 — Deep Audit** | 3-5h | All level 2 + threat modeling, business logic, architecture | Pro report + remediation plan |
-| **4 — Red Team** | On demand | All level 3 + kill chains, financial impact | Complete Red Team report |
-
----
-
-## 📚 Couverture
-
-### Frameworks Web
-React · Next.js · Laravel · NestJS · Express · Vue.js · Angular
-
-### Frameworks Mobile
-React Native · Flutter · Ionic/Capacitor · Expo
-
-### Web Vulnerabilities (13)
-SQL/NoSQL Injection · XSS · CSRF · CORS · IDOR/BOLA · SSRF · XXE · Deserialization · Supply Chain · Exposed Secrets · Missing Headers · Auth & AuthZ · Business Logic
-
-### Mobile Vulnerabilities (8)
-Local Storage · Network · Binary Analysis · Permissions · IPC & Deep Links · Mobile Auth · Mobile Crypto · Runtime
-
-### Compliance
-RGPD (Privacy by Design, user rights) · PCI-DSS (payment cards) · HIPAA (health data) · SOC 2
-
----
-
-## 💡 Using with AI Agents
-
-```text
-Full web audit:
-  "Audit this React app using the CyberAudit Skill."
-
-Quick scan:
-  "Run a security quick scan. Focus on critical and high only."
-
-Mobile audit:
-  "Audit this Flutter app. Check storage and network."
-
-PR review:
-  "Review this PR from a security perspective."
-
-Threat modeling:
-  "Run a STRIDE threat model on this new feature."
-```
-
-**All commands → [COMMANDS.md](./COMMANDS.md)**
-
----
-
-## 🛠️ Prerequisites
-
-- Git
-- A compatible AI agent (Cursor, Claude, GPT, Copilot, Windsurf…)
-- **Zero dependency. Zero runtime. Zero compilation.**
-
----
-
-## 📄 License
-
-CyberAudit Skill — LUNAIRE EDITION  
-Free to use. Attribution appreciated.
-
----
-
-*Generated by CyberAudit Skill v3.0 — LUNAIRE EDITION*  
-*Aligned with OWASP Top 10 2023 · OWASP MASVS 2.0 · CVSS 3.1*
+MIT

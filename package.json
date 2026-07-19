@@ -41,8 +41,7 @@
     "install:local": "node dist/cli.js install",
     "install:all": "node dist/cli.js install --agent all",
     "serve": "tsx src/mcp-server.ts",
-    "prepublishOnly": "npm run build",
-    "postinstall": "node -e \"try{require('fs').accessSync('dist/cli.js');require('child_process').execSync('node dist/cli.js install --agent all 2>/dev/null',{stdio:'inherit'})}catch(e){}\""
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "commander": "^12.0.0"

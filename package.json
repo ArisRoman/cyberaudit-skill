@@ -1,6 +1,6 @@
 {
   "name": "cyberaudit-skill",
-  "version": "3.1.5",
+  "version": "3.2.0",
   "description": "Universal security audit skill for AI agents. Install once, audit any web or mobile app. OpenCode, Claude Code, Cursor, Kiro, Gemini — all supported.",
   "keywords": [
     "mcp",

@@ -6,7 +6,7 @@ import { homedir } from "os";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { startMcpServer as startMcpServerImpl } from "./mcp-server.js";
-import { scanSecrets, formatFindingsText, formatFindingsJson } from "./scanners/secrets.js";
+import { scanSecrets, formatFindingsText } from "./scanners/secrets.js";
 import { scanWeb, formatWebFindingsText } from "./scanners/web.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -294,7 +294,7 @@ async function main() {
       console.error(`[CyberAudit] Scanning ${scanTarget} [type=${type}]... (${VERSION})`);
 
       try {
-        let allFindings: any[] = [];
+        const allFindings: any[] = [];
         let secretFindings: any[] = [];
         let webFindings: any[] = [];
 
@@ -343,7 +343,7 @@ async function main() {
       const { generateReport } = await import("./report/generator.js");
       let findings: any[] = [];
       let scanTarget = target || ".";
-      let reportType = (options.type || 'web').toLowerCase();
+      const reportType = (options.type || 'web').toLowerCase();
 
       if (options.input) {
         const inputPath = resolve(options.input);

@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
-import { join, extname, relative } from 'path';
+import { join, extname } from 'path';
 import { SecretFinding, ScanOptions, Severity } from './types.js';
 
 type Pattern = {
@@ -31,16 +31,6 @@ const DEFAULT_IGNORE = [
   '.vercel',
   '.serverless',
   'vendor',
-];
-
-const DEFAULT_EXTENSIONS = [
-  '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs',
-  '.php', '.py', '.rb', '.go', '.java', '.kt',
-  '.env', '.env.local', '.env.production', '.env.example',
-  '.json', '.yml', '.yaml', '.toml', '.ini',
-  '.sh', '.bash',
-  '.tf', '.tfvars',
-  '.vue', '.svelte',
 ];
 
 function redactMiddle(s: string, keep = 4): string {

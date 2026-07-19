@@ -77,15 +77,6 @@ function bar(score: number): string {
   return `[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${score}%`;
 }
 
-function phaseForSeverity(s: string): string {
-  switch (s) {
-    case 'CRITICAL': return 'PHASE 1 — IMMEDIATE (Week 1)';
-    case 'HIGH': return 'PHASE 2 — SHORT TERM (Weeks 2-4)';
-    case 'MEDIUM': return 'PHASE 3 — MEDIUM TERM (Months 2-3)';
-    default: return 'PHASE 4 — LONG TERM (Backlog)';
-  }
-}
-
 export function generateReport(input: ReportInput): ReportOutput {
   const { target, findings, type, version, framework } = input;
   const date = input.date || new Date().toISOString().split('T')[0];

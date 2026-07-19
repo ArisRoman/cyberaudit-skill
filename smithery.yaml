@@ -1,0 +1,13 @@
+# Smithery.ai configuration for CyberAudit MCP server
+# Start command: npx -y cyberaudit-skill serve
+
+name: cyberaudit-skill
+description: Security audit skill for AI agents — OWASP, mobile, API, cloud
+version: "3.0.0"
+runtime: node
+entrypoint:
+  command: npx
+  args:
+    - -y
+    - cyberaudit-skill
+    - serve

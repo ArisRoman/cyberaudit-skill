@@ -1,0 +1,58 @@
+{
+  "name": "cyberaudit-skill",
+  "version": "3.0.0",
+  "description": "Universal security audit skill for AI agents. Install once, audit any web or mobile app. OpenCode, Claude Code, Cursor, Kiro, Gemini — all supported.",
+  "keywords": [
+    "mcp",
+    "security",
+    "audit",
+    "cybersecurity",
+    "owasp",
+    "pentest",
+    "skill",
+    "ai-agent",
+    "opencode",
+    "claude-code",
+    "cursor"
+  ],
+  "author": "ArisRoman",
+  "license": "MIT",
+  "homepage": "https://github.com/ArisRoman/cyberaudit-skill",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArisRoman/cyberaudit-skill.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ArisRoman/cyberaudit-skill/issues"
+  },
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "cyberaudit-skill": "dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "skills/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "tsx src/cli.ts",
+    "install:local": "node dist/cli.js install",
+    "install:all": "node dist/cli.js install --agent all",
+    "serve": "tsx src/mcp-server.ts",
+    "prepublishOnly": "npm run build",
+    "postinstall": "node -e \"try{require('fs').accessSync('dist/cli.js');require('child_process').execSync('node dist/cli.js install --agent all 2>/dev/null',{stdio:'inherit'})}catch(e){}\""
+  },
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

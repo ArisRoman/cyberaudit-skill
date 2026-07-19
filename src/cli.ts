@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { existsSync, mkdirSync, cpSync, readdirSync, writeFileSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, cpSync, readdirSync, writeFileSync, readFileSync, unlinkSync } from "fs";
 import { createInterface } from "readline";
 import { homedir } from "os";
 import { join, dirname } from "path";
@@ -64,6 +64,12 @@ function installSkill(targetDir: string, agent: string, dryRun: boolean): boolea
     const cmdSrc = join(PKG_ROOT, "skills", "cyberaudit", "commands");
     if (existsSync(cmdSrc)) {
       mkdirSync(cmdDir, { recursive: true });
+      // Remove stale colon-named files (pre-v3.1.3)
+      for (const f of readdirSync(cmdDir)) {
+        if (typeof f === "string" && f.startsWith("audit:") && f.endsWith(".md")) {
+          try { unlinkSync(join(cmdDir, f)); } catch {}
+        }
+      }
       cpSync(cmdSrc, cmdDir, { recursive: true });
       console.log(`  ✓ Commands installed to opencode`);
     }

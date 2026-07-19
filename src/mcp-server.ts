@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { createInterface } from "readline";
-import { readFileSync, existsSync } from "fs";
-import { join, dirname } from "path";
+import { readFileSync, existsSync, statSync } from "fs";
+import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+import { scanSecrets, formatFindingsText } from "./scanners/secrets.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
@@ -71,7 +72,7 @@ export const MCP_TOOLS = [
   },
   {
     name: "cyberaudit-quick",
-    description: "Run a quick vulnerability scan (5-minute assessment, secrets + criticals)",
+    description: "Run a quick vulnerability scan (5-minute assessment, secrets + criticals) — deterministic scanner included",
     inputSchema: {
       type: "object",
       properties: {
@@ -98,7 +99,6 @@ function write(id: any, result: any) {
 function handleToolCall(id: any, name: string, args: any) {
   const auditType = name.replace("cyberaudit-", "");
 
-  // Special list tool
   if (name === "cyberaudit-list") {
     write(id, {
       result: {
@@ -111,16 +111,43 @@ function handleToolCall(id: any, name: string, args: any) {
 • cyberaudit-mobile: OWASP MASVS mobile audit
 • cyberaudit-api: OWASP API Top 10 audit
 • cyberaudit-cloud: Cloud config audit (S3, IAM, SG, storage)
-• cyberaudit-quick: Quick 5-minute scan (secrets + criticals)
+• cyberaudit-quick: Quick 5-minute scan (secrets + criticals) — DETERMINISTIC SCANNER
 • cyberaudit-full: Full stack (web + api + cloud) via /audit
 
 Skill location: ${SKILL_DIR}
-Docs: https://github.com/ArisRoman/cyberaudit-skill`,
+Docs: https://github.com/ArisRoman/cyberaudit-skill
+Scanner: deterministic secrets detection 15 patterns`,
           },
         ],
       },
     });
     return;
+  }
+
+  if (name === "cyberaudit-quick" && args.target) {
+    try {
+      const targetPath = resolve(args.target);
+      if (existsSync(targetPath)) {
+        const stat = statSync(targetPath);
+        if (stat.isDirectory() || stat.isFile()) {
+          const findings = scanSecrets(targetPath);
+          const textReport = formatFindingsText(findings, args.target);
+          write(id, {
+            result: {
+              content: [
+                {
+                  type: "text",
+                  text: `▶ CyberAudit ${VERSION}: QUICK deterministic scan completed\n\n${textReport}\n---\nFor full context-aware audit, load skill and run:\n/${name} "${args.target}"\n\nSkill location: ${SKILL_DIR}\nChecklist: ${SKILL_DIR}/cloud/CLOUD-CHECKLIST.md\nCLI: npx cyberaudit-skill scan "${args.target}" --json`,
+                },
+              ],
+            },
+          });
+          return;
+        }
+      }
+    } catch (e: any) {
+      console.error(`[CyberAudit] Quick scan failed for ${args.target}: ${e.message}`);
+    }
   }
 
   write(id, {
@@ -139,7 +166,8 @@ To execute the full audit, load the CyberAudit Skill and run:
 The skill will guide you through all checks, scoring, and report generation.
 
 Skill location: ${SKILL_DIR}
-Cloud checklist: ${SKILL_DIR}/cloud/CLOUD-CHECKLIST.md`,
+Cloud checklist: ${SKILL_DIR}/cloud/CLOUD-CHECKLIST.md
+Secrets scanner: npx cyberaudit-skill scan "${args.target || "."}"`,
         },
       ],
     },
@@ -178,7 +206,6 @@ export function startMcpServer() {
           break;
 
         case "notifications/initialized":
-          // no response expected
           break;
 
         default:
@@ -187,7 +214,7 @@ export function startMcpServer() {
           }
       }
     } catch {
-      // ignore malformed input
+      // ignore malformed
     }
   });
 
@@ -197,7 +224,6 @@ export function startMcpServer() {
   console.error(`[CyberAudit] MCP server ready v${VERSION} | Skill: ${SKILL_DIR}`);
 }
 
-// Run if executed directly (npx, node dist/mcp-server.js)
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("mcp-server.js") || process.argv[1]?.endsWith("mcp-server.ts")) {
   startMcpServer();
 }

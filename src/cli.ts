@@ -6,6 +6,7 @@ import { homedir } from "os";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { startMcpServer as startMcpServerImpl } from "./mcp-server.js";
+import { scanSecrets, formatFindingsText, formatFindingsJson } from "./scanners/secrets.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
@@ -276,6 +277,37 @@ async function main() {
         }
       }
       console.log();
+    });
+
+  program
+    .command("scan")
+    .description("Deterministic security scan (secrets, criticals) — no LLM needed")
+    .argument("[target]", "Path to scan", ".")
+    .option("--json", "Output JSON instead of text", false)
+    .option("--type <type>", "Scan type: secrets, all", "all")
+    .option("--ignore <patterns>", "Comma-separated ignore patterns", "")
+    .action((target, options) => {
+      const scanTarget = resolve(target || ".");
+      const ignore = options.ignore ? options.ignore.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+      console.error(`[CyberAudit] Scanning ${scanTarget} for secrets... (${VERSION})`);
+
+      try {
+        const findings = scanSecrets(scanTarget, { ignore });
+        if (options.json) {
+          console.log(JSON.stringify({ target: scanTarget, version: VERSION, findings: formatFindingsJson(findings) }, null, 2));
+        } else {
+          console.log(formatFindingsText(findings, scanTarget));
+          if (findings.length > 0) {
+            console.log(`\n💡 Next: run full audit with /audit:secrets ${target} or /audit:web for context-aware review.`);
+          }
+        }
+        // Exit code 1 if critical findings, for CI
+        const hasCritical = findings.some(f => f.severity === 'CRITICAL');
+        if (hasCritical) process.exitCode = 1;
+      } catch (e: any) {
+        console.error(`[CyberAudit] Scan failed: ${e.message}`);
+        process.exit(1);
+      }
     });
 
   program

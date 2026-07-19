@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { existsSync, mkdirSync, cpSync, readdirSync, writeFileSync, readFileSync, unlinkSync } from "fs";
+import { existsSync, mkdirSync, cpSync, readdirSync, writeFileSync, readFileSync, rmSync, unlinkSync } from "fs";
 import { createInterface } from "readline";
 import { homedir } from "os";
 import { join, dirname } from "path";
@@ -40,6 +40,12 @@ function detectInstalledAgents(): Agent[] {
   return found;
 }
 
+function installDir(src: string, dst: string): void {
+  if (existsSync(dst)) rmSync(dst, { recursive: true, force: true });
+  mkdirSync(dirname(dst), { recursive: true });
+  cpSync(src, dst, { recursive: true });
+}
+
 function installSkill(targetDir: string, agent: string, dryRun: boolean): boolean {
   if (!existsSync(SKILL_SRC)) {
     console.error(`✗ Skill source not found at ${SKILL_SRC}.`);
@@ -51,32 +57,31 @@ function installSkill(targetDir: string, agent: string, dryRun: boolean): boolea
     return true;
   }
 
-  // Install/update skill files
-  mkdirSync(targetDir, { recursive: true });
-  cpSync(SKILL_SRC, targetDir, { recursive: true });
+  // Wipe + re-copy skill dir so stale files are cleaned up
+  installDir(SKILL_SRC, targetDir);
   console.log(`  ✓ Installed at ${targetDir}`);
 
   // Install command + skill files for opencode
   if (agent === "opencode") {
     const opencodeConf = join(homedir(), ".config", "opencode");
 
-    const cmdDir = join(opencodeConf, "commands");
     const cmdSrc = join(PKG_ROOT, "skills", "cyberaudit", "commands");
     if (existsSync(cmdSrc)) {
-      mkdirSync(cmdDir, { recursive: true });
-      // Remove stale colon-named files (pre-v3.1.3)
-      for (const f of readdirSync(cmdDir)) {
-        if (typeof f === "string" && f.startsWith("audit:") && f.endsWith(".md")) {
-          try { unlinkSync(join(cmdDir, f)); } catch {}
+      // Remove stale audit command files, keep other commands (caveman etc.)
+      if (existsSync(opencodeConf + "/commands")) {
+        for (const f of readdirSync(opencodeConf + "/commands")) {
+          if (typeof f === "string" && f.startsWith("audit") && f.endsWith(".md")) {
+            try { unlinkSync(join(opencodeConf, "commands", f)); } catch {}
+          }
         }
       }
-      cpSync(cmdSrc, cmdDir, { recursive: true });
+      mkdirSync(join(opencodeConf, "commands"), { recursive: true });
+      cpSync(cmdSrc, join(opencodeConf, "commands"), { recursive: true });
       console.log(`  ✓ Commands installed to opencode`);
     }
 
-    const skillDir = join(opencodeConf, "skills", "cyberaudit");
-    mkdirSync(skillDir, { recursive: true });
-    cpSync(SKILL_SRC, skillDir, { recursive: true });
+    // Wipe + re-copy opencode skill dir
+    installDir(SKILL_SRC, join(opencodeConf, "skills", "cyberaudit"));
     console.log(`  ✓ Skill installed to opencode`);
   }
 

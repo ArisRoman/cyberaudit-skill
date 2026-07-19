@@ -331,6 +331,62 @@ async function main() {
     });
 
   program
+    .command("report")
+    .description("Generate deterministic security report from scan results")
+    .argument("[target]", "Target path or app name", ".")
+    .option("--input <file>", "JSON file from scan --json (if omitted, scans target)")
+    .option("--type <type>", "Report type: web|api|mobile|cloud|full", "web")
+    .option("--framework <fw>", "Framework name (e.g., Express, Next.js, Laravel)")
+    .option("--output <file>", "Output markdown file (default: stdout)")
+    .option("--json", " Also emit JSON summary to stderr", false)
+    .action(async (target, options) => {
+      const { generateReport } = await import("./report/generator.js");
+      let findings: any[] = [];
+      let scanTarget = target || ".";
+      let reportType = (options.type || 'web').toLowerCase();
+
+      if (options.input) {
+        const inputPath = resolve(options.input);
+        if (!existsSync(inputPath)) {
+          console.error(`Input file not found: ${inputPath}`);
+          process.exit(1);
+        }
+        const raw = readFileSync(inputPath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        findings = parsed.findings || parsed;
+        scanTarget = parsed.target || scanTarget;
+      } else {
+        // Auto-scan
+        console.error(`[CyberAudit] No input file, running scan on ${scanTarget}...`);
+        const secrets = scanSecrets(resolve(scanTarget));
+        const web = scanWeb(resolve(scanTarget));
+        findings = [...secrets.map(f=>({...f, scanner:'secrets'})), ...web.map(f=>({...f, scanner:'web'}))];
+      }
+
+      const report = generateReport({
+        target: scanTarget,
+        version: VERSION,
+        type: reportType as any,
+        findings,
+        framework: options.framework,
+      });
+
+      if (options.output) {
+        const outPath = resolve(options.output);
+        writeFileSync(outPath, report.markdown, 'utf-8');
+        console.error(`[CyberAudit] Report written to ${outPath} | Score ${report.score}/100 ${report.verdict}`);
+      } else {
+        console.log(report.markdown);
+      }
+
+      if (options.json) {
+        console.error(JSON.stringify({ score: report.score, verdict: report.verdict, dashboard: report.dashboard, owasp: report.owaspCompliance }, null, 2));
+      }
+
+      if (report.verdict === 'CRITICAL' || report.verdict === 'HIGH') process.exitCode = 1;
+    });
+
+  program
     .command("serve")
     .description("Start CyberAudit MCP server (stdio)")
     .action(() => {

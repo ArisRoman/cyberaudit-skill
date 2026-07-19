@@ -71,6 +71,15 @@ When user types `/cyberaudit` or `/audit` — **list all commands below**.
 | `/audit:api:inventory` | API inventory/discovery |
 | `/audit:api:third-party` | Third-party API audit |
 
+## Cloud
+
+| Command | Action |
+|---|---|
+| `/audit:cloud` | Full cloud config audit (CIS, S3, IAM, SG) |
+| `/audit:cloud:s3` | Storage / buckets public access |
+| `/audit:cloud:iam` | IAM least privilege & wildcards |
+| `/audit:cloud:network` | Security Groups & firewall |
+
 ## Compliance
 
 | Command | Action |
@@ -80,7 +89,8 @@ When user types `/cyberaudit` or `/audit` — **list all commands below**.
 | `/audit:hipaa` | HIPAA compliance check |
 | `/audit:masvs` | MASVS 2.0 score |
 | `/audit:owasp` | OWASP Top 10 score |
+| `/audit:cis` | CIS Benchmark cloud score |
 
 ## Execution
 
-For any `/audit:xxx` command, load the corresponding files from `web/`, `mobile/`, `api/`, or `reports/`, then execute the audit methodology from `SKILL.md`.
+For any `/audit:xxx` command, load the corresponding files from `web/`, `mobile/`, `api/`, `cloud/`, or `reports/`, then execute the audit methodology from `SKILL.md`.

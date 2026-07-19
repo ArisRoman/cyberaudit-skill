@@ -23,7 +23,7 @@ OPTION A — PROJECT-LOCAL (recommended for teams)
   All developers get access automatically.
 
   # In your project root directory
-  git clone https://github.com/yourname/cyberaudit-skill \
+  git clone https://github.com/ArisRoman/cyberaudit-skill \
     .skills/cyberaudit
 
   # Add to .gitignore if you don't want to commit it
@@ -42,7 +42,7 @@ OPTION B — MACHINE-GLOBAL (recommended for solo devs)
 
   # In your home directory
   mkdir -p ~/.skills
-  git clone https://github.com/yourname/cyberaudit-skill \
+  git clone https://github.com/ArisRoman/cyberaudit-skill \
     ~/.skills/cyberaudit
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -295,10 +295,10 @@ ANY OTHER AGENT (via API)
 ═══════════════════════════════════════════════════════════════
 
   Report an issue:
-    github.com/yourname/cyberaudit-skill/issues
+    github.com/ArisRoman/cyberaudit-skill/issues
 
   Suggest an improvement:
-    github.com/yourname/cyberaudit-skill/pulls
+    github.com/ArisRoman/cyberaudit-skill/pulls
 
   Add a new framework:
     Create web/frameworks/NEW-FRAMEWORK.md
@@ -306,6 +306,7 @@ ANY OTHER AGENT (via API)
     Add the command in COMMANDS.md
     Submit a PR
 
-  VERSION: 3.0.0 — LUNAIRE EDITION
+  VERSION: 3.1.5
   LICENSE: MIT
-  STANDARDS: OWASP Top 10 2023 · MASVS 2.0 · CVSS 3.1
+  STANDARDS: OWASP Top 10 2023 · MASVS 2.0 · CVSS 3.1 · CIS Cloud
+  REPO: github.com/ArisRoman/cyberaudit-skill

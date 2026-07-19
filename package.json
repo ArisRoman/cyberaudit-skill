@@ -38,9 +38,16 @@
     "build": "tsc",
     "start": "node dist/cli.js",
     "dev": "tsx src/cli.ts",
+    "dev:serve": "tsx src/mcp-server.ts",
     "install:local": "node dist/cli.js install",
     "install:all": "node dist/cli.js install --agent all",
-    "serve": "tsx src/mcp-server.ts",
+    "serve": "node dist/mcp-server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js}\"",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
@@ -48,8 +55,13 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.64.0",
+    "@typescript-eslint/parser": "^8.64.0",
+    "eslint": "^10.7.0",
+    "prettier": "^3.9.5",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=18.0.0"

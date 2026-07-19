@@ -48,16 +48,23 @@ CyberAudit is a structured security audit framework delivered as an AI agent ski
 ## Quick Start
 
 ```bash
-# Auto-detect & install for all found agents (22 agents checked)
+# Auto-detect & install globally (~/) for all found agents (22 agents checked)
 npx -y cyberaudit-skill install
 
-# Install for a specific agent
+# Project-local install like ui-ux-pro — 100% guarantee "/" shows 8 main commands
+npx -y cyberaudit-skill install --agent all --local
+# Creates ./.claude/skills/cyberaudit + ./.claude/commands/ (8 cmds), ./.cursor/commands/, ./.windsurf/workflows/, ./.agent/workflows/, etc.
+
+# Install for a specific agent (global)
 npx -y cyberaudit-skill install --agent claude-code
-npx -y cyberaudit-skill install --agent cursor
-npx -y cyberaudit-skill install --agent windsurf
+npx -y cyberaudit-skill install --agent cursor --global
+
+# Install locally for one agent
+npx -y cyberaudit-skill install --agent claude-code --local
 
 # Preview without making changes
 npx -y cyberaudit-skill install --dry-run
+npx -y cyberaudit-skill install --dry-run --local
 
 # Deterministic scan (no LLM)
 npx -y cyberaudit-skill scan ./ --type all

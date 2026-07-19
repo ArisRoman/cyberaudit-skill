@@ -56,6 +56,21 @@ When user types `/cyberaudit` or `/audit` — **list all commands below**.
 | `/audit:ionic` | Ionic audit |
 | `/audit:expo` | Expo audit |
 
+## API
+
+| Command | Action |
+|---|---|
+| `/audit:api` | Full API audit (OWASP API Top 10) |
+| `/audit:auth-api` | API authentication & authorization |
+| `/audit:api:rest` | REST API audit |
+| `/audit:api:graphql` | GraphQL API audit |
+| `/audit:api:ws` | WebSocket API audit |
+| `/audit:api:bola` | BOLA/IDOR audit |
+| `/audit:api:bopla` | BOPLA (BFLA) audit |
+| `/audit:api:rate-limit` | Rate limiting audit |
+| `/audit:api:inventory` | API inventory/discovery |
+| `/audit:api:third-party` | Third-party API audit |
+
 ## Compliance
 
 | Command | Action |
@@ -68,4 +83,4 @@ When user types `/cyberaudit` or `/audit` — **list all commands below**.
 
 ## Execution
 
-For any `/audit:xxx` command, load the corresponding files from `web/`, `mobile/`, or `reports/`, then execute the audit methodology from `SKILL.md`.
+For any `/audit:xxx` command, load the corresponding files from `web/`, `mobile/`, `api/`, or `reports/`, then execute the audit methodology from `SKILL.md`.

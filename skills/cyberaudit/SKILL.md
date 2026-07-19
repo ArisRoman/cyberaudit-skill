@@ -70,6 +70,20 @@ Security audit intelligence for AI agents. Universal, framework-agnostic, method
 | `/audit:ionic` | Ionic audit |
 | `/audit:expo` | Expo audit |
 
+### API
+| Command | Action |
+|---|---|
+| `/audit:api` | Full API audit (OWASP API Top 10) |
+| `/audit:auth-api` | API authentication & authorization |
+| `/audit:api:rest` | REST API audit |
+| `/audit:api:graphql` | GraphQL API audit |
+| `/audit:api:ws` | WebSocket API audit |
+| `/audit:api:bola` | BOLA/IDOR audit |
+| `/audit:api:bopla` | BOPLA (BFLA) audit |
+| `/audit:api:rate-limit` | Rate limiting audit |
+| `/audit:api:inventory` | API inventory/discovery |
+| `/audit:api:third-party` | Third-party API audit |
+
 ### Compliance
 | Command | Action |
 |---|---|
@@ -84,7 +98,7 @@ Security audit intelligence for AI agents. Universal, framework-agnostic, method
 Execute on every audit request:
 
 **STEP 1 — IDENTIFICATION** (30 sec)
-- TYPE → Web / Mobile / Both
+- TYPE → Web / Mobile / API / Both
 - FRAMEWORK → Identify precisely (React, Laravel, Flutter, etc.)
 - CONTEXT → Dev / Staging / Production
 - SCOPE → Entire code / Single module
@@ -93,6 +107,7 @@ Execute on every audit request:
 **STEP 2 — MODE LOADING**
 - Web → Load web checklist + framework-specific guide
 - Mobile → Load mobile checklist + framework-specific guide
+- API → Load API checklist + type-specific guide (REST/GraphQL/WebSocket)
 
 **STEP 3 — STRUCTURED AUDIT**
 Follow the loaded philosophy. Never skip a phase. Document each finding immediately.
@@ -178,6 +193,11 @@ Every report must include:
 - **Express**: CORS, helmet, input validation, error handling
 - **NestJS**: Guards, pipes, serialization, GraphQL security
 
+### API Types
+- **REST**: Resource IDOR/BOLA, mass assignment, parameter injection, deprecated endpoints
+- **GraphQL**: Introspection, depth/complexity, batching attacks, field-level auth
+- **WebSocket**: Authentication on connect, per-message auth, origin validation, rate limiting
+
 ### Mobile Frameworks
 - **React Native**: AsyncStorage, deep links, WebView XSS, JS bundle exposure
 - **Flutter**: Method channels, root detection, local storage, obfuscation
@@ -217,9 +237,24 @@ This skill lives at `~/.skills/cyberaudit/`. Additional sub-skills:
 ├── MASTER.md             (full vulnerability taxonomy + scoring)
 ├── USAGE-GUIDE.md        (user-facing documentation)
 ├── README.md             (project overview)
+├── api/
+│   ├── API-PHILOSOPHY.md
+│   ├── API-CHECKLIST.md
+│   ├── API-REMEDIATION-LIBRARY.md
+│   ├── types/
+│   │   ├── REST.md
+│   │   ├── GRAPHQL.md
+│   │   └── WEBSOCKET.md
+│   └── vulnerabilities/
+│       ├── BOLA.md
+│       ├── BOPLA.md
+│       ├── RATE-LIMITING.md
+│       ├── INVENTORY.md
+│       └── THIRD-PARTY-API.md
 ├── reports/
 │   ├── REPORT-TEMPLATE-WEB.md
 │   ├── REPORT-TEMPLATE-MOBILE.md
+│   ├── REPORT-TEMPLATE-API.md
 │   └── EXECUTIVE-SUMMARY-TEMPLATE.md
 ├── shared/
 │   ├── COMPLIANCE.md
@@ -254,7 +289,8 @@ This skill lives at `~/.skills/cyberaudit/`. Additional sub-skills:
 ```
 
 For detailed framework-specific checks, load the appropriate file from `web/frameworks/` or `mobile/frameworks/`.
-For vulnerability-specific deep dives, load from `web/vulnerabilities/` or `mobile/vulnerabilities/`.
+For vulnerability-specific deep dives, load from `web/vulnerabilities/`, `mobile/vulnerabilities/`, or `api/vulnerabilities/`.
+For API-specific audits, load from `api/` (philosophy, checklist, type guide, remediation library).
 
 ---
 

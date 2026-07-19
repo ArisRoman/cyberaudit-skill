@@ -7,6 +7,7 @@ import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { startMcpServer as startMcpServerImpl } from "./mcp-server.js";
 import { scanSecrets, formatFindingsText, formatFindingsJson } from "./scanners/secrets.js";
+import { scanWeb, formatWebFindingsText } from "./scanners/web.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
@@ -281,28 +282,47 @@ async function main() {
 
   program
     .command("scan")
-    .description("Deterministic security scan (secrets, criticals) — no LLM needed")
+    .description("Deterministic security scan (secrets, web vulns) — no LLM needed")
     .argument("[target]", "Path to scan", ".")
     .option("--json", "Output JSON instead of text", false)
-    .option("--type <type>", "Scan type: secrets, all", "all")
+    .option("--type <type>", "Scan type: secrets, web, all", "all")
     .option("--ignore <patterns>", "Comma-separated ignore patterns", "")
     .action((target, options) => {
       const scanTarget = resolve(target || ".");
       const ignore = options.ignore ? options.ignore.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-      console.error(`[CyberAudit] Scanning ${scanTarget} for secrets... (${VERSION})`);
+      const type = (options.type || 'all').toLowerCase();
+      console.error(`[CyberAudit] Scanning ${scanTarget} [type=${type}]... (${VERSION})`);
 
       try {
-        const findings = scanSecrets(scanTarget, { ignore });
+        let allFindings: any[] = [];
+        let secretFindings: any[] = [];
+        let webFindings: any[] = [];
+
+        if (type === 'secrets' || type === 'all') {
+          secretFindings = scanSecrets(scanTarget, { ignore });
+          allFindings.push(...secretFindings.map(f => ({ ...f, scanner: 'secrets' })));
+        }
+        if (type === 'web' || type === 'all') {
+          webFindings = scanWeb(scanTarget);
+          allFindings.push(...webFindings.map(f => ({ ...f, scanner: 'web' })));
+        }
+
         if (options.json) {
-          console.log(JSON.stringify({ target: scanTarget, version: VERSION, findings: formatFindingsJson(findings) }, null, 2));
+          console.log(JSON.stringify({ target: scanTarget, version: VERSION, type, findings: allFindings }, null, 2));
         } else {
-          console.log(formatFindingsText(findings, scanTarget));
-          if (findings.length > 0) {
-            console.log(`\n💡 Next: run full audit with /audit:secrets ${target} or /audit:web for context-aware review.`);
+          if (type === 'secrets' || type === 'all') {
+            console.log(formatFindingsText(secretFindings, scanTarget));
+          }
+          if (type === 'web' || type === 'all') {
+            console.log(formatWebFindingsText(webFindings, scanTarget));
+          }
+          if (allFindings.length > 0) {
+            console.log(`\n💡 Next: run full audit with /audit:secrets, /audit:web or /audit for context-aware review.`);
+          } else {
+            console.log(`\n✅ No deterministic findings for type=${type} in ${scanTarget}`);
           }
         }
-        // Exit code 1 if critical findings, for CI
-        const hasCritical = findings.some(f => f.severity === 'CRITICAL');
+        const hasCritical = allFindings.some(f => f.severity === 'CRITICAL');
         if (hasCritical) process.exitCode = 1;
       } catch (e: any) {
         console.error(`[CyberAudit] Scan failed: ${e.message}`);

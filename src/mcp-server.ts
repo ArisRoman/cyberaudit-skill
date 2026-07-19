@@ -5,6 +5,7 @@ import { readFileSync, existsSync, statSync } from "fs";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { scanSecrets, formatFindingsText } from "./scanners/secrets.js";
+import { scanWeb, formatWebFindingsText } from "./scanners/web.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
@@ -130,14 +131,16 @@ Scanner: deterministic secrets detection 15 patterns`,
       if (existsSync(targetPath)) {
         const stat = statSync(targetPath);
         if (stat.isDirectory() || stat.isFile()) {
-          const findings = scanSecrets(targetPath);
-          const textReport = formatFindingsText(findings, args.target);
+          const secretFindings = scanSecrets(targetPath);
+          const webFindings = scanWeb(targetPath);
+          const secretReport = formatFindingsText(secretFindings, args.target);
+          const webReport = formatWebFindingsText(webFindings, args.target);
           write(id, {
             result: {
               content: [
                 {
                   type: "text",
-                  text: `▶ CyberAudit ${VERSION}: QUICK deterministic scan completed\n\n${textReport}\n---\nFor full context-aware audit, load skill and run:\n/${name} "${args.target}"\n\nSkill location: ${SKILL_DIR}\nChecklist: ${SKILL_DIR}/cloud/CLOUD-CHECKLIST.md\nCLI: npx cyberaudit-skill scan "${args.target}" --json`,
+                  text: `▶ CyberAudit ${VERSION}: QUICK deterministic scan completed\n\n${secretReport}\n${webReport}\n---\nTotal: ${secretFindings.length + webFindings.length} findings (secrets:${secretFindings.length} web:${webFindings.length})\nFor full context-aware audit, load skill and run:\n/${name} "${args.target}"\n\nSkill location: ${SKILL_DIR}\nChecklist: ${SKILL_DIR}/cloud/CLOUD-CHECKLIST.md\nCLI: npx cyberaudit-skill scan "${args.target}" --json`,
                 },
               ],
             },

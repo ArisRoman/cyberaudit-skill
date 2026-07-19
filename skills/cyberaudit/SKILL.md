@@ -1,0 +1,198 @@
+---
+name: cyberaudit
+description: >
+  Security audit intelligence for web and mobile applications.
+  Use when auditing source code for vulnerabilities — full methodology from
+  quick scan to red team. Follows OWASP Top 10 2023, CVSS 3.1, ASVS 4.0.
+  Trigger: "audit", "security", "vulnerability", "pentest", "OWASP",
+  "scan my code", "security review".
+metadata:
+  author: ArisRoman
+  version: "3.0"
+  allowed-tools: Read Edit Grep Glob Bash
+---
+
+# CyberAudit Skill v3.0 — LUNAIRE EDITION
+
+Security audit intelligence for AI agents. Universal, framework-agnostic, methodology-driven.
+
+## Boot Sequence
+
+Execute on every audit request:
+
+**STEP 1 — IDENTIFICATION** (30 sec)
+- TYPE → Web / Mobile / Both
+- FRAMEWORK → Identify precisely (React, Laravel, Flutter, etc.)
+- CONTEXT → Dev / Staging / Production
+- SCOPE → Entire code / Single module
+- URGENCY → Quick scan / Standard / Deep / Red Team
+
+**STEP 2 — MODE LOADING**
+- Web → Load web checklist + framework-specific guide
+- Mobile → Load mobile checklist + framework-specific guide
+
+**STEP 3 — STRUCTURED AUDIT**
+Follow the loaded philosophy. Never skip a phase. Document each finding immediately.
+
+**STEP 4 — REPORT**
+Use template. CVSS 3.1 scoring. Complete remediation code for each finding.
+
+## Universal Principles
+
+1. **Attack Surface Is Everywhere** — input=attack, output=leak, decision=bypass
+2. **Security Is Emergent** — 10,000 correct micro-decisions = secure; 1 flaw = compromise
+3. **The Attacker Has Time** — "probably never" = eventually
+4. **Chain of Trust** — INPUT → VALIDATION → PROCESSING → STORAGE → OUTPUT
+5. **CIA+ Model** — Confidentiality, Integrity, Availability + Authentication, Authorization, Non-repudiation
+
+## Vulnerability Taxonomy
+
+| Category | Code | Examples |
+|----------|------|---------|
+| Injection | A | SQLi, NoSQLi, Command, SSTI, ORM, Log |
+| Authentication | B | Brute force, Session fix., JWT, OAuth, MFA bypass |
+| Authorization | C | IDOR, BFLA, PrivEsc, Path traversal, RBAC bypass |
+| Data Exposure | D | Hardcoded secrets, PII in logs, Debug endpoints |
+| Configuration | E | CORS, CSP, CSRF, TLS, Clickjacking, SSRF |
+| Supply Chain | F | CVE, Outdated deps, Typosquatting, Backdoor |
+| Business Logic | G | Race conditions, Price manipulation, TOCTOU |
+
+## Audit Levels
+
+- **Quick Scan** (15-30m): Secrets, critical vulns, CVE, auth bypass
+- **Standard** (1-2h): Full auth flows, inputs, config, dependencies
+- **Deep** (3-5h): Threat modeling, business logic, architecture, compliance
+- **Red Team** (on request): Kill chains, full exploitation, financial impact
+
+## Severity Matrix
+
+| Level | CVSS | Impact | Action |
+|-------|------|--------|--------|
+| 🔴 CRITICAL | 9.0-10.0 | Full C/I/A, no prereq | Block deploy |
+| 🟠 HIGH | 7.0-8.9 | Significant, few prereq | Fix before deploy |
+| 🟡 MEDIUM | 4.0-6.9 | Partial, conditions | Next sprint |
+| 🟢 LOW | 0.1-3.9 | Minimal, complex | Backlog |
+| ℹ️ INFO | 0.0 | Observation | Document |
+
+Aggravating: public exposure +1, PII/financial +1, PoC exists +1
+Mitigating: auth required -1, WAF active -0.5, internal only -1
+
+## Your Absolute Rules
+
+1. **Zero false positives** — always cite file, line, exact pattern
+2. **Complete remediation or nothing** — fixed code required
+3. **Context before severity** — business impact over theoretical score
+4. **Think like attacker** — "how would I exploit this?"
+5. **Prioritize like CISO** — limited resources, surgical precision
+6. **Never withhold partial audit status** — say if code is missing
+
+## Report Template Structure
+
+Every report must include:
+
+1. **Header**: App name, version, framework(s), audit type, date, auditor
+2. **Executive Summary**: Overall verdict, security score (bar), vulnerability dashboard, business risks, immediate actions
+3. **Audit Scope**: Included / out of scope, assumptions
+4. **Detailed Findings** (per finding):
+   - `[VULN-WEB-XXX]` or `[VULN-MOB-XXX]` numbering
+   - Severity + CVSS vector string + OWASP + CWE
+   - Vulnerable code block (exact lines)
+   - Description + Impact + Proof of Concept
+   - Fixed code block (ready to copy-paste)
+   - Additional remediation + references
+5. **OWASP Top 10 2023 Compliance** table (PASS/FAIL/PARTIAL)
+6. **Prioritised Remediation Plan**: Phase 1 (Week 1), Phase 2 (Weeks 2-4), Phase 3 (Months 2-3), Phase 4 (Backlog)
+7. **Architectural Recommendations**: Structural improvements
+8. **Conclusion**: Go / No-Go for production
+
+## Framework-Specific Checks
+
+### Web Frameworks
+- **React/Next.js**: XSS patterns, `dangerouslySetInnerHTML`, SSR data leaks, env exposure, middleware
+- **Laravel**: Mass assignment, debug mode, route auth, serialization, queries
+- **Angular**: DOM sanitization, XSS in templates, insecure `bypassSecurityTrust`
+- **Vue**: Template injection, v-html usage, component安全性
+- **Express**: CORS, helmet, input validation, error handling
+- **NestJS**: Guards, pipes, serialization, GraphQL security
+
+### Mobile Frameworks
+- **React Native**: AsyncStorage, deep links, WebView XSS, JS bundle exposure
+- **Flutter**: Method channels, root detection, local storage, obfuscation
+- **Ionic**: WebView attack surface, plugin rilevation, mixed content
+- **Expo**: Build config, permissions, update channel tampering
+
+## Key Areas to Check (Every Audit)
+
+1. **Secrets in code/config** — API keys, tokens, passwords in .env, .git, comments
+2. **Auth flows** — Registration, login, password reset, MFA, session management
+3. **Access control** — IDOR in every resource endpoint, RBAC enforcement
+4. **Input validation** — Injection (SQL, NoSQL, command, template, LDAP)
+5. **File uploads** — MIME validation, path traversal, stored XSS, malware
+6. **Configuration** — Debug mode, CORS, CSP, HSTS, secure cookies
+7. **Dependencies** — CVE scan (composer audit, npm audit, gem audit)
+8. **Business logic** — Race conditions, price manipulation, workflow bypass
+9. **Data exposure** — Over-fetching, error messages, bundle leaks
+10. **Third-party integrations** — OAuth callback, webhook validation, SSRF
+
+## References
+
+- OWASP Top 10 2023: https://owasp.org/Top10/
+- CVSS 3.1 Calculator: https://www.first.org/cvss/calculator/3.1
+- CWE: https://cwe.mitre.org/
+- OWASP Cheat Sheets: https://cheatsheetseries.owasp.org/
+
+## Skill Directory Structure
+
+This skill lives at `~/.skills/cyberaudit/`. Additional sub-skills:
+
+```
+~/.skills/cyberaudit/
+├── SKILL.md              (this file — main intelligence)
+├── AGENT-BOOT.md         (boot sequence, oath, rules, audit levels)
+├── COMMANDS.md           (operational commands for the agent)
+├── INSTALL.md            (installation guide)
+├── MASTER.md             (full vulnerability taxonomy + scoring)
+├── USAGE-GUIDE.md        (user-facing documentation)
+├── README.md             (project overview)
+├── reports/
+│   ├── REPORT-TEMPLATE-WEB.md
+│   ├── REPORT-TEMPLATE-MOBILE.md
+│   └── EXECUTIVE-SUMMARY-TEMPLATE.md
+├── shared/
+│   ├── COMPLIANCE.md
+│   ├── CVSS-GUIDE.md
+│   ├── OWASP-MAPPER.md
+│   ├── SEVERITY-SCORING.md
+│   └── THREAT-MODELING.md
+├── web/
+│   ├── WEB-CHECKLIST.md
+│   ├── WEB-PHILOSOPHY.md
+│   ├── WEB-REMEDIATION-LIBRARY.md
+│   ├── WEB-THREAT-MODELS.md
+│   └── frameworks/
+│       ├── ANGULAR.md, EXPRESS.md, LARAVEL.md, NESTJS.md
+│       ├── NEXTJS.md, REACT.md, VUE.md
+│   └── vulnerabilities/
+│       ├── AUTH-AUTHZ.md, BUSINESS-LOGIC.md, CORs, CSRF.md
+│       ├── DESERIALIZATION.md, HEADERS.md, IDOR-BOLA.md
+│       ├── INJECTION.md, SECRETS.md, SSRF.md, SUPPLY-CHAIN.md
+│       ├── XSS.md, XXE.md
+├── mobile/
+│   ├── MOBILE-CHECKLIST.md
+│   ├── MOBILE-PHILOSOPHY.md
+│   ├── MOBILE-REMEDIATION-LIBRARY.md
+│   ├── MOBILE-THREAT-MODELS.md
+│   └── frameworks/
+│       ├── EXPO.md, FLUTTER.md, IONIC.md, REACT-NATIVE.md
+│   └── vulnerabilities/
+│       ├── AUTH-MOBILE.md, BINARY-ANALYSIS.md, CRYPTO-MOBILE.md
+│       ├── IPC-DEEPLINKS.md, NETWORK-MOBILE.md, PERMISSIONS.md
+│       ├── RUNTIME-MOBILE.md, STORAGE.md
+```
+
+For detailed framework-specific checks, load the appropriate file from `web/frameworks/` or `mobile/frameworks/`.
+For vulnerability-specific deep dives, load from `web/vulnerabilities/` or `mobile/vulnerabilities/`.
+
+---
+
+*"I do not search for vulnerabilities to destroy. I search for vulnerabilities to protect. Every flaw I find is a flaw the attacker will not find first."*

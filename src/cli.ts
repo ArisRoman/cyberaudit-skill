@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { existsSync, mkdirSync, cpSync, readdirSync, writeFileSync, readFileSync, rmSync, unlinkSync } from "fs";
-import { createInterface } from "readline";
+import { existsSync, mkdirSync, cpSync, readdirSync, writeFileSync, readFileSync, rmSync, unlinkSync, copyFileSync } from "fs";
 import { homedir } from "os";
-import { join, dirname } from "path";
+import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+import { startMcpServer as startMcpServerImpl } from "./mcp-server.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
 const PKG = JSON.parse(readFileSync(join(PKG_ROOT, "package.json"), "utf-8"));
 const SKILL_SRC = join(PKG_ROOT, "skills", "cyberaudit");
+const VERSION = PKG.version || "3.1.5";
 
 type Agent = "opencode" | "claude-code" | "kiro" | "cursor" | "gemini" | "antigravity" | "antigravity-cli";
 
@@ -23,6 +24,12 @@ const AGENT_TARGETS: Record<Agent, string[]> = {
   "antigravity":     [join(homedir(), ".gemini", "antigravity", "skills", "cyberaudit")],
   "antigravity-cli": [join(homedir(), ".gemini", "antigravity-cli", "skills", "cyberaudit")],
 };
+
+function isSafePath(p: string): boolean {
+  const home = resolve(homedir());
+  const resolved = resolve(p);
+  return resolved.startsWith(home) && resolved.includes("cyberaudit");
+}
 
 function detectInstalledAgents(): Agent[] {
   const found: Agent[] = [];
@@ -41,7 +48,17 @@ function detectInstalledAgents(): Agent[] {
 }
 
 function installDir(src: string, dst: string): void {
-  if (existsSync(dst)) rmSync(dst, { recursive: true, force: true });
+  if (!existsSync(src)) {
+    throw new Error(`Source not found: ${src}`);
+  }
+  if (!isSafePath(dst)) {
+    console.error(`✗ Unsafe destination blocked: ${dst}`);
+    throw new Error(`Unsafe path: ${dst}`);
+  }
+  if (existsSync(dst)) {
+    console.log(`  ♻️  Cleaning previous install at ${dst}`);
+    rmSync(dst, { recursive: true, force: true });
+  }
   mkdirSync(dirname(dst), { recursive: true });
   cpSync(src, dst, { recursive: true });
 }
@@ -57,9 +74,14 @@ function installSkill(targetDir: string, agent: string, dryRun: boolean): boolea
     return true;
   }
 
-  // Wipe + re-copy skill dir so stale files are cleaned up
-  installDir(SKILL_SRC, targetDir);
-  console.log(`  ✓ Installed at ${targetDir}`);
+  try {
+    // Wipe + re-copy skill dir so stale files are cleaned up
+    installDir(SKILL_SRC, targetDir);
+    console.log(`  ✓ Installed at ${targetDir}`);
+  } catch (e: any) {
+    console.error(`  ✗ Failed to install at ${targetDir}: ${e.message}`);
+    return false;
+  }
 
   // Install command + skill files for opencode
   if (agent === "opencode") {
@@ -67,22 +89,32 @@ function installSkill(targetDir: string, agent: string, dryRun: boolean): boolea
 
     const cmdSrc = join(PKG_ROOT, "skills", "cyberaudit", "commands");
     if (existsSync(cmdSrc)) {
-      // Remove stale audit command files, keep other commands (caveman etc.)
-      if (existsSync(opencodeConf + "/commands")) {
-        for (const f of readdirSync(opencodeConf + "/commands")) {
-          if (typeof f === "string" && f.startsWith("audit") && f.endsWith(".md")) {
-            try { unlinkSync(join(opencodeConf, "commands", f)); } catch {}
+      // Remove stale audit command files only, warn before
+      const cmdDst = join(opencodeConf, "commands");
+      if (existsSync(cmdDst)) {
+        const stale = readdirSync(cmdDst).filter((f) => typeof f === "string" && f.startsWith("audit") && f.endsWith(".md"));
+        if (stale.length > 0) {
+          console.log(`  ♻️  Removing ${stale.length} stale audit commands from opencode: ${stale.join(", ")}`);
+          for (const f of stale) {
+            try { unlinkSync(join(cmdDst, f)); } catch {}
           }
         }
       }
-      mkdirSync(join(opencodeConf, "commands"), { recursive: true });
-      cpSync(cmdSrc, join(opencodeConf, "commands"), { recursive: true });
-      console.log(`  ✓ Commands installed to opencode`);
+      mkdirSync(cmdDst, { recursive: true });
+      cpSync(cmdSrc, cmdDst, { recursive: true });
+      console.log(`  ✓ Commands installed to opencode (${cmdDst})`);
     }
 
     // Wipe + re-copy opencode skill dir
-    installDir(SKILL_SRC, join(opencodeConf, "skills", "cyberaudit"));
-    console.log(`  ✓ Skill installed to opencode`);
+    const opencodeSkillDst = join(opencodeConf, "skills", "cyberaudit");
+    try {
+      if (isSafePath(opencodeSkillDst)) {
+        installDir(SKILL_SRC, opencodeSkillDst);
+        console.log(`  ✓ Skill installed to opencode (${opencodeSkillDst})`);
+      }
+    } catch (e: any) {
+      console.error(`  ✗ Failed opencode secondary install: ${e.message}`);
+    }
   }
 
   return true;
@@ -91,7 +123,7 @@ function installSkill(targetDir: string, agent: string, dryRun: boolean): boolea
 function installForCursor(dryRun: boolean): boolean {
   const cursorDir = join(homedir(), ".cursor");
   if (!existsSync(cursorDir)) {
-    console.log("  ~ Cursor not found (no ~/.cursor/)");
+    console.log("  ~ Cursor not found (no ~/.cursor/) — skipping");
     return false;
   }
 
@@ -99,11 +131,26 @@ function installForCursor(dryRun: boolean): boolean {
   let mcpConfig: any = { mcpServers: {} };
 
   if (existsSync(mcpPath)) {
-    mcpConfig = JSON.parse(readFileSync(mcpPath, "utf-8"));
+    try {
+      const raw = readFileSync(mcpPath, "utf-8");
+      if (raw.trim().length > 0) {
+        mcpConfig = JSON.parse(raw);
+      }
+    } catch (e: any) {
+      console.error(`  ✗ Cursor mcp.json is corrupted (${e.message}) — backing up and recreating`);
+      if (!dryRun) {
+        try {
+          const bak = `${mcpPath}.bak.${Date.now()}`;
+          copyFileSync(mcpPath, bak);
+          console.log(`  ↳ Backup saved to ${bak}`);
+        } catch {}
+      }
+      mcpConfig = { mcpServers: {} };
+    }
   }
 
   if (mcpConfig.mcpServers?.["cyberaudit-skill"]) {
-    console.log(`  ✓ Cursor MCP already configured`);
+    console.log(`  ✓ Cursor MCP already configured (${mcpPath})`);
     return true;
   }
 
@@ -112,14 +159,28 @@ function installForCursor(dryRun: boolean): boolean {
     return true;
   }
 
+  // Backup before write
+  if (existsSync(mcpPath)) {
+    try {
+      const bak = `${mcpPath}.bak`;
+      copyFileSync(mcpPath, bak);
+    } catch {}
+  }
+
   mcpConfig.mcpServers = mcpConfig.mcpServers || {};
   mcpConfig.mcpServers["cyberaudit-skill"] = {
     command: "npx",
     args: ["-y", "cyberaudit-skill", "serve"],
   };
-  writeFileSync(mcpPath, JSON.stringify(mcpConfig, null, 2));
-  console.log(`  ✓ Added Cursor MCP entry to ${mcpPath}`);
-  return true;
+  try {
+    mkdirSync(dirname(mcpPath), { recursive: true });
+    writeFileSync(mcpPath, JSON.stringify(mcpConfig, null, 2));
+    console.log(`  ✓ Added Cursor MCP entry to ${mcpPath}`);
+    return true;
+  } catch (e: any) {
+    console.error(`  ✗ Failed to write Cursor MCP config: ${e.message}`);
+    return false;
+  }
 }
 
 function installForAgent(agent: Agent, dryRun: boolean): boolean {
@@ -140,7 +201,7 @@ async function main() {
   program
     .name("cyberaudit-skill")
     .description("CyberAudit Skill — universal security audit skill for AI agents")
-    .version(PKG.version);
+    .version(VERSION);
 
   program
     .command("install")
@@ -155,52 +216,63 @@ async function main() {
       if (agentOpt === "all") {
         agents = detectInstalledAgents();
         if (agents.length === 0) {
-          console.log("No supported AI agents detected.\nTry: --agent opencode");
+          console.log("No supported AI agents detected. Checked ~/.agents, ~/.claude, ~/.cursor, ~/.kiro, ~/.gemini");
+          console.log("Try: --agent opencode  or  --agent claude-code  or  --agent cursor");
           process.exit(1);
         }
+        console.log(`Detected agents: ${agents.join(", ")}`);
       } else {
         const valid: Agent[] = ["opencode", "claude-code", "kiro", "cursor", "gemini", "antigravity", "antigravity-cli"];
         if (!valid.includes(agentOpt as Agent)) {
-          console.error(`Unknown agent: "${agentOpt}". Valid: ${valid.join(", ")}`);
+          console.error(`Unknown agent: "${agentOpt}". Valid: ${valid.join(", ")}, all`);
           process.exit(1);
         }
         agents = [agentOpt as Agent];
       }
 
       const label = dryRun ? " (dry run)" : "";
-      console.log(`\n═══ CyberAudit Installation${label} ═══\n`);
+      console.log(`\n═══ CyberAudit v${VERSION} Installation${label} ═══\n`);
 
       let ok = 0, fail = 0;
       for (const agent of agents) {
-        const name = agent.charAt(0).toUpperCase() + agent.slice(1);
+        console.log(`\n→ ${agent}:`);
         if (installForAgent(agent, dryRun)) ok++; else fail++;
       }
 
-      console.log(`\nDone. ${ok} configured, ${fail} skipped.\n`);
-      if (!dryRun) console.log("Verify: cyberaudit-skill list\n");
+      console.log(`\nDone. ${ok} configured, ${fail} skipped/failed.\n`);
+      if (!dryRun && ok > 0) console.log("Verify: npx -y cyberaudit-skill list\n");
     });
 
   program
     .command("list")
     .description("List audits and installed agents")
     .action(() => {
-      console.log("\n═══ CyberAudit — Available Audits ═══\n");
+      console.log(`\n═══ CyberAudit v${VERSION} — Available Audits ═══\n`);
       console.log("  cyberaudit-web       OWASP web app security audit");
       console.log("  cyberaudit-mobile    OWASP mobile app security audit");
-      console.log("  cyberaudit-api       API security audit");
-      console.log("  cyberaudit-cloud     Cloud config audit");
+      console.log("  cyberaudit-api       API security audit (REST/GraphQL/WS)");
+      console.log("  cyberaudit-cloud     Cloud config audit (S3, IAM, SG, storage)");
       console.log("  cyberaudit-full      Full stack (web + API + cloud)");
-      console.log("  cyberaudit-quick     Quick vulnerability scan\n");
+      console.log("  cyberaudit-quick     Quick vulnerability scan (secrets + criticals)\n");
       console.log("═══ Installed Agents ═══\n");
       for (const [agent] of Object.entries(AGENT_TARGETS)) {
         if (agent === "cursor") {
           const mcpPath = join(homedir(), ".cursor", "mcp.json");
-          const ok = existsSync(mcpPath) && readFileSync(mcpPath, "utf-8").includes("cyberaudit-skill");
-          console.log(`  ${ok ? "✓" : "✗"} ${agent}`);
+          let ok = false;
+          try {
+            if (existsSync(mcpPath)) {
+              ok = readFileSync(mcpPath, "utf-8").includes("cyberaudit-skill");
+            }
+          } catch {}
+          console.log(`  ${ok ? "✓" : "✗"} ${agent}${ok ? ` (${mcpPath})` : ""}`);
         } else {
           const paths = AGENT_TARGETS[agent as Agent];
-          const ok = paths.some((p) => existsSync(p));
-          console.log(`  ${ok ? "✓" : "✗"} ${agent}`);
+          let ok = false;
+          let foundPath = "";
+          for (const p of paths) {
+            if (existsSync(p)) { ok = true; foundPath = p; break; }
+          }
+          console.log(`  ${ok ? "✓" : "✗"} ${agent}${ok ? ` (${foundPath})` : ""}`);
         }
       }
       console.log();
@@ -210,80 +282,11 @@ async function main() {
     .command("serve")
     .description("Start CyberAudit MCP server (stdio)")
     .action(() => {
-      console.error("[CyberAudit] MCP server starting...");
-      startMcpServer();
+      console.error(`[CyberAudit] MCP server starting v${VERSION}...`);
+      startMcpServerImpl();
     });
 
   program.parse(process.argv);
-}
-
-function startMcpServer() {
-  const rl = createInterface({ input: process.stdin });
-
-  const capabilities = {
-    tools: [
-      {
-        name: "cyberaudit-web",
-        description: "Web app security audit (OWASP Top 10)",
-        inputSchema: {
-          type: "object",
-          properties: {
-            target: { type: "string", description: "URL or project path" },
-            depth: { type: "string", enum: ["quick", "standard", "deep"], default: "standard" },
-          },
-        },
-      },
-      {
-        name: "cyberaudit-mobile",
-        description: "Mobile app security audit (OWASP MASVS)",
-        inputSchema: {
-          type: "object",
-          properties: {
-            target: { type: "string", description: "App package or project path" },
-            platform: { type: "string", enum: ["android", "ios", "both"], default: "both" },
-          },
-        },
-      },
-      {
-        name: "cyberaudit-api",
-        description: "API security audit",
-        inputSchema: {
-          type: "object",
-          properties: {
-            target: { type: "string", description: "API endpoint or spec file" },
-          },
-        },
-      },
-      {
-        name: "cyberaudit-list",
-        description: "List all available audit types",
-        inputSchema: { type: "object", properties: {} },
-      },
-    ],
-  };
-
-  function write(id: any, result: any) {
-    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id, ...result }) + "\n");
-  }
-
-  rl.on("line", (line) => {
-    try {
-      const msg = JSON.parse(line.trim());
-      const id = msg.id;
-
-      if (msg.method === "initialize") {
-        write(id, { protocolVersion: "2024-11-05", capabilities, serverInfo: { name: "cyberaudit-skill", version: "3.0.0" } });
-      } else if (msg.method === "tools/list") {
-        write(id, capabilities);
-      } else if (msg.method === "tools/call") {
-        write(id, {
-          content: [{ type: "text", text: `[CyberAudit] "${msg.params.name}" called with ${JSON.stringify(msg.params.arguments)}\n\nRun the audit by loading the CyberAudit Skill.` }],
-        });
-      } else {
-        write(id, { error: { code: -32601, message: `Unknown method: ${msg.method}` } });
-      }
-    } catch { /* skip malformed */ }
-  });
 }
 
 main().catch((err) => {

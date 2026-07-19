@@ -1,75 +1,94 @@
 #!/usr/bin/env node
 
 import { createInterface } from "readline";
-import { writeFileSync, readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
-import { execSync } from "child_process";
 import { fileURLToPath } from "url";
-import { homedir } from "os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SKILL_DIR = join(__dirname, "..", "skills", "cyberaudit");
+const PKG_ROOT = join(__dirname, "..");
+const SKILL_DIR = join(PKG_ROOT, "skills", "cyberaudit");
 
-const capabilities = {
-  tools: [
-    {
-      name: "cyberaudit-web",
-      description: "Run a web application security audit (OWASP Top 10)",
-      inputSchema: {
-        type: "object",
-        properties: {
-          target: { type: "string", description: "URL, domain, or project path to audit" },
-          depth: { type: "string", enum: ["quick", "standard", "deep"], default: "standard" },
-        },
-        required: ["target"],
+function getVersion(): string {
+  try {
+    const pkgPath = join(PKG_ROOT, "package.json");
+    if (existsSync(pkgPath)) {
+      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+      return pkg.version || "3.1.5";
+    }
+  } catch {}
+  return "3.1.5";
+}
+
+const VERSION = getVersion();
+
+export const MCP_TOOLS = [
+  {
+    name: "cyberaudit-web",
+    description: "Run a web application security audit (OWASP Top 10)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "URL, domain, or project path to audit" },
+        depth: { type: "string", enum: ["quick", "standard", "deep"], default: "standard" },
       },
+      required: ["target"],
     },
-    {
-      name: "cyberaudit-mobile",
-      description: "Run a mobile application security audit (OWASP MASVS)",
-      inputSchema: {
-        type: "object",
-        properties: {
-          target: { type: "string", description: "App identifier, APK/IPA path, or project path" },
-          platform: { type: "string", enum: ["android", "ios", "both"], default: "both" },
-        },
-        required: ["target"],
+  },
+  {
+    name: "cyberaudit-mobile",
+    description: "Run a mobile application security audit (OWASP MASVS)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "App identifier, APK/IPA path, or project path" },
+        platform: { type: "string", enum: ["android", "ios", "both"], default: "both" },
       },
+      required: ["target"],
     },
-    {
-      name: "cyberaudit-api",
-      description: "Run an API security audit",
-      inputSchema: {
-        type: "object",
-        properties: {
-          target: { type: "string", description: "API base URL, OpenAPI spec path, or project directory" },
-        },
-        required: ["target"],
+  },
+  {
+    name: "cyberaudit-api",
+    description: "Run an API security audit (OWASP API Top 10)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "API base URL, OpenAPI spec path, or project directory" },
       },
+      required: ["target"],
     },
-    {
-      name: "cyberaudit-cloud",
-      description: "Run a cloud configuration security audit",
-      inputSchema: {
-        type: "object",
-        properties: {
-          target: { type: "string", description: "Cloud provider or config file path" },
-        },
-        required: ["target"],
+  },
+  {
+    name: "cyberaudit-cloud",
+    description: "Run a cloud configuration security audit (AWS/GCP/Azure S3, IAM, SG, storage)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "Cloud provider, IaC path (terraform/cloudformation), or config file path" },
       },
+      required: ["target"],
     },
-    {
-      name: "cyberaudit-quick",
-      description: "Run a quick vulnerability scan (5-minute assessment)",
-      inputSchema: {
-        type: "object",
-        properties: {
-          target: { type: "string", description: "URL, domain, or project path" },
-        },
-        required: ["target"],
+  },
+  {
+    name: "cyberaudit-quick",
+    description: "Run a quick vulnerability scan (5-minute assessment, secrets + criticals)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "URL, domain, or project path" },
       },
+      required: ["target"],
     },
-  ],
+  },
+  {
+    name: "cyberaudit-list",
+    description: "List all available audit types and check installation",
+    inputSchema: { type: "object", properties: {} },
+  },
+];
+
+export const capabilities = {
+  tools: MCP_TOOLS,
 };
 
 function write(id: any, result: any) {
@@ -79,65 +98,106 @@ function write(id: any, result: any) {
 function handleToolCall(id: any, name: string, args: any) {
   const auditType = name.replace("cyberaudit-", "");
 
+  // Special list tool
+  if (name === "cyberaudit-list") {
+    write(id, {
+      result: {
+        content: [
+          {
+            type: "text",
+            text: `═══ CyberAudit ${VERSION} — Available Audits ═══
+
+• cyberaudit-web: OWASP Top 10 web app audit
+• cyberaudit-mobile: OWASP MASVS mobile audit
+• cyberaudit-api: OWASP API Top 10 audit
+• cyberaudit-cloud: Cloud config audit (S3, IAM, SG, storage)
+• cyberaudit-quick: Quick 5-minute scan (secrets + criticals)
+• cyberaudit-full: Full stack (web + api + cloud) via /audit
+
+Skill location: ${SKILL_DIR}
+Docs: https://github.com/ArisRoman/cyberaudit-skill`,
+          },
+        ],
+      },
+    });
+    return;
+  }
+
   write(id, {
-    content: [
-      {
-        type: "text",
-        text: `▶ CyberAudit: ${auditType.toUpperCase()} audit requested
+    result: {
+      content: [
+        {
+          type: "text",
+          text: `▶ CyberAudit ${VERSION}: ${auditType.toUpperCase()} audit requested
 
-Target: ${args.target}
-${args.depth ? `Depth: ${args.depth}` : ""}
-${args.platform ? `Platform: ${args.platform}` : ""}
-
+Target: ${args.target || "not provided"}
+${args.depth ? `Depth: ${args.depth}\n` : ""}${args.platform ? `Platform: ${args.platform}\n` : ""}
 To execute the full audit, load the CyberAudit Skill and run:
 
-/${name} "${args.target}"
+/${name} "${args.target || "."}"
 
 The skill will guide you through all checks, scoring, and report generation.
 
-Skill location: ${SKILL_DIR}`,
-      },
-    ],
+Skill location: ${SKILL_DIR}
+Cloud checklist: ${SKILL_DIR}/cloud/CLOUD-CHECKLIST.md`,
+        },
+      ],
+    },
   });
 }
 
-const rl = createInterface({ input: process.stdin });
+export function startMcpServer() {
+  const rl = createInterface({ input: process.stdin });
 
-rl.on("line", (line) => {
-  try {
-    const msg = JSON.parse(line.trim());
-    const id = msg.id;
+  rl.on("line", (line) => {
+    try {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const msg = JSON.parse(trimmed);
+      const id = msg.id;
 
-    switch (msg.method) {
-      case "initialize":
-        write(id, {
-          protocolVersion: "2024-11-05",
-          capabilities,
-          serverInfo: { name: "cyberaudit-skill", version: "3.0.0" },
-        });
-        break;
+      switch (msg.method) {
+        case "initialize":
+          write(id, {
+            result: {
+              protocolVersion: "2024-11-05",
+              capabilities,
+              serverInfo: { name: "cyberaudit-skill", version: VERSION },
+            },
+          });
+          break;
 
-      case "tools/list":
-        write(id, capabilities);
-        break;
+        case "tools/list":
+          write(id, {
+            result: capabilities,
+          });
+          break;
 
-      case "tools/call":
-        handleToolCall(id, msg.params.name, msg.params.arguments || {});
-        break;
+        case "tools/call":
+          handleToolCall(id, msg.params?.name, msg.params?.arguments || {});
+          break;
 
-      case "notifications/initialized":
-        // no response expected
-        break;
+        case "notifications/initialized":
+          // no response expected
+          break;
 
-      default:
-        write(id, { error: { code: -32601, message: `Method not found: ${msg.method}` } });
+        default:
+          if (id !== undefined) {
+            write(id, { error: { code: -32601, message: `Method not found: ${msg.method}` } });
+          }
+      }
+    } catch {
+      // ignore malformed input
     }
-  } catch (e) {
-    // ignore malformed input
-  }
-});
+  });
 
-process.on("SIGINT", () => process.exit(0));
-process.on("SIGTERM", () => process.exit(0));
+  process.on("SIGINT", () => process.exit(0));
+  process.on("SIGTERM", () => process.exit(0));
 
-console.error(`[CyberAudit] MCP server ready | Skill: ${SKILL_DIR}`);
+  console.error(`[CyberAudit] MCP server ready v${VERSION} | Skill: ${SKILL_DIR}`);
+}
+
+// Run if executed directly (npx, node dist/mcp-server.js)
+if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("mcp-server.js") || process.argv[1]?.endsWith("mcp-server.ts")) {
+  startMcpServer();
+}

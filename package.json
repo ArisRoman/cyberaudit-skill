@@ -38,9 +38,12 @@
     "build": "tsc",
     "start": "node dist/cli.js",
     "dev": "tsx src/cli.ts",
+    "dev:serve": "tsx src/mcp-server.ts",
     "install:local": "node dist/cli.js install",
     "install:all": "node dist/cli.js install --agent all",
-    "serve": "tsx src/mcp-server.ts",
+    "serve": "node dist/mcp-server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
@@ -49,7 +52,8 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=18.0.0"

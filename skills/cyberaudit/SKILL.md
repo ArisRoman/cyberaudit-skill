@@ -9,7 +9,7 @@ description: >
 compatibility: Pure Markdown skill, no external dependencies. Works with any AI agent that loads SKILL.md.
 metadata:
   author: ArisRoman
-  version: "3.0"
+  version: "3.1.5"
   allowed-tools: Read Edit Grep Glob Bash
 ---
 
@@ -84,6 +84,14 @@ Security audit intelligence for AI agents. Universal, framework-agnostic, method
 | `/audit:api:inventory` | API inventory/discovery |
 | `/audit:api:third-party` | Third-party API audit |
 
+### Cloud
+| Command | Action |
+|---|---|
+| `/audit:cloud` | Full cloud config audit (S3, IAM, SG) |
+| `/audit:cloud:s3` | Storage security (public buckets) |
+| `/audit:cloud:iam` | IAM privilege audit |
+| `/audit:cloud:network` | Security groups & network audit |
+
 ### Compliance
 | Command | Action |
 |---|---|
@@ -92,28 +100,30 @@ Security audit intelligence for AI agents. Universal, framework-agnostic, method
 | `/audit:hipaa` | HIPAA compliance check |
 | `/audit:masvs` | MASVS 2.0 score |
 | `/audit:owasp` | OWASP Top 10 score |
+| `/audit:cis` | CIS Benchmark cloud score |
 
 ## Boot Sequence
 
 Execute on every audit request:
 
 **STEP 1 — IDENTIFICATION** (30 sec)
-- TYPE → Web / Mobile / API / Both
-- FRAMEWORK → Identify precisely (React, Laravel, Flutter, etc.)
+- TYPE → Web / Mobile / API / Cloud / Both
+- FRAMEWORK → Identify precisely (React, Laravel, Flutter, Terraform, etc.)
 - CONTEXT → Dev / Staging / Production
-- SCOPE → Entire code / Single module
+- SCOPE → Entire code / Single module / IaC
 - URGENCY → Quick scan / Standard / Deep / Red Team
 
 **STEP 2 — MODE LOADING**
 - Web → Load web checklist + framework-specific guide
 - Mobile → Load mobile checklist + framework-specific guide
 - API → Load API checklist + type-specific guide (REST/GraphQL/WebSocket)
+- Cloud → Load cloud checklist + philosophy (AWS/GCP/Azure)
 
 **STEP 3 — STRUCTURED AUDIT**
 Follow the loaded philosophy. Never skip a phase. Document each finding immediately.
 
 **STEP 4 — REPORT**
-Use template. CVSS 3.1 scoring. Complete remediation code for each finding.
+Use template (web/mobile/api/cloud). CVSS 3.1 scoring. Complete remediation code for each finding.
 
 ## Universal Principles
 
@@ -255,7 +265,12 @@ This skill lives at `~/.skills/cyberaudit/`. Additional sub-skills:
 │   ├── REPORT-TEMPLATE-WEB.md
 │   ├── REPORT-TEMPLATE-MOBILE.md
 │   ├── REPORT-TEMPLATE-API.md
+│   ├── REPORT-TEMPLATE-CLOUD.md
 │   └── EXECUTIVE-SUMMARY-TEMPLATE.md
+├── cloud/
+│   ├── CLOUD-CHECKLIST.md
+│   ├── CLOUD-PHILOSOPHY.md
+│   └── CLOUD-REMEDIATION-LIBRARY.md
 ├── shared/
 │   ├── COMPLIANCE.md
 │   ├── CVSS-GUIDE.md

@@ -3,7 +3,7 @@
 
 name: cyberaudit-skill
 description: Security audit skill for AI agents — OWASP, mobile, API, cloud
-version: "3.0.0"
+version: "3.1.5"
 runtime: node
 entrypoint:
   command: npx

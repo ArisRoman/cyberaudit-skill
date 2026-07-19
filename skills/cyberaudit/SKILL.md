@@ -6,6 +6,7 @@ description: >
   quick scan to red team. Follows OWASP Top 10 2023, CVSS 3.1, ASVS 4.0.
   Trigger: "audit", "security", "vulnerability", "pentest", "OWASP",
   "scan my code", "security review".
+compatibility: Pure Markdown skill, no external dependencies. Works with any AI agent that loads SKILL.md.
 metadata:
   author: ArisRoman
   version: "3.0"

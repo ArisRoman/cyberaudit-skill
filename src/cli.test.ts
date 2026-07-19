@@ -107,6 +107,6 @@ describe('Multi-agent support (like ui-ux-pro)', () => {
   it('should install commands for \"/\" menu', () => {
     const content = readFileSync(join(process.cwd(), 'src', 'cli.ts'), 'utf-8');
     expect(content).toContain('installCommands');
-    expect(content).toContain('typing "/" will show');
+    expect(content).toContain('"/" will show');
   });
 });

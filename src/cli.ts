@@ -40,7 +40,8 @@ function installSkill(targetDir: string, dryRun: boolean): boolean {
     return false;
   }
 
-  if (existsSync(targetDir) && readdirSync(targetDir).length > 0) {
+  const skillMdOk = existsSync(targetDir) && existsSync(join(targetDir, "SKILL.md"));
+  if (skillMdOk) {
     console.log(`  ✓ Already installed at ${targetDir}`);
     return true;
   }

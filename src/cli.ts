@@ -13,47 +13,284 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, "..");
 const PKG = JSON.parse(readFileSync(join(PKG_ROOT, "package.json"), "utf-8"));
 const SKILL_SRC = join(PKG_ROOT, "skills", "cyberaudit");
+const COMMANDS_SRC = join(SKILL_SRC, "commands");
 const VERSION = PKG.version || "3.1.5";
 
-type Agent = "opencode" | "claude-code" | "kiro" | "cursor" | "gemini" | "antigravity" | "antigravity-cli";
+// 8 main commands that appear when typing "/" — like ui-ux-pro's approach
+const MAIN_COMMANDS = [
+  'audit.md',              // /audit
+  'audit-web.md',          // /audit:web
+  'audit-mobile.md',       // /audit:mobile
+  'audit-api.md',          // /audit:api
+  'audit-cloud.md',        // /audit:cloud
+  'audit-quick.md',        // /audit:quick
+  'audit-report.md',       // /audit:report
+  'audit-help.md',         // /audit:help
+];
 
-const AGENT_TARGETS: Record<Agent, string[]> = {
-  "opencode":        [join(homedir(), ".agents", "skills", "cyberaudit")],
-  "claude-code":     [join(homedir(), ".claude", "skills", "cyberaudit")],
-  "kiro":            [join(homedir(), ".kiro", "skills", "cyberaudit")],
-  "cursor":          [join(homedir(), ".cursor", "mcp.json")],
-  "gemini":          [join(homedir(), ".gemini", "skills", "cyberaudit")],
-  "antigravity":     [join(homedir(), ".gemini", "antigravity", "skills", "cyberaudit")],
-  "antigravity-cli": [join(homedir(), ".gemini", "antigravity-cli", "skills", "cyberaudit")],
+// All agents from ui-ux-pro + ours (19 total) — matching ui-ux-pro-max-skill coverage
+export type Agent =
+  | "opencode"
+  | "claude-code"
+  | "cursor"
+  | "windsurf"
+  | "antigravity"
+  | "antigravity-cli"
+  | "copilot"
+  | "kiro"
+  | "codex"
+  | "qoder"
+  | "roocode"
+  | "gemini"
+  | "trae"
+  | "continue"
+  | "codebuddy"
+  | "droid"
+  | "kilocode"
+  | "warp"
+  | "augment"
+  | "codewhale"
+  | "cline"
+  | "aider";
+
+interface AgentConfig {
+  displayName: string;
+  skillPaths: string[];      // where to copy full skill
+  commandPaths: string[];    // where to copy slash-commands ("/" menu)
+  workflowPaths?: string[];  // Windsurf/Antigravity use workflows folder
+  mcpPath?: string;          // Cursor etc. use mcp.json
+  docsUrl?: string;
+}
+
+const H = homedir();
+
+function j(...parts: string[]): string {
+  return join(H, ...parts);
+}
+
+export const AGENT_CONFIG: Record<Agent, AgentConfig> = {
+  "opencode": {
+    displayName: "OpenCode",
+    skillPaths: [j(".agents", "skills", "cyberaudit"), j(".config", "opencode", "skills", "cyberaudit")],
+    commandPaths: [j(".config", "opencode", "commands")],
+  },
+  "claude-code": {
+    displayName: "Claude Code",
+    skillPaths: [j(".claude", "skills", "cyberaudit")],
+    commandPaths: [j(".claude", "commands")],
+  },
+  "cursor": {
+    displayName: "Cursor",
+    skillPaths: [j(".cursor", "skills", "cyberaudit")],
+    commandPaths: [j(".cursor", "commands")],
+    mcpPath: j(".cursor", "mcp.json"),
+  },
+  "windsurf": {
+    displayName: "Windsurf",
+    skillPaths: [j(".windsurf", "skills", "cyberaudit"), j(".codeium", "windsurf", "skills", "cyberaudit")],
+    commandPaths: [j(".windsurf", "commands")],
+    workflowPaths: [j(".windsurf", "workflows")],
+  },
+  "antigravity": {
+    displayName: "Antigravity",
+    skillPaths: [j(".gemini", "antigravity", "skills", "cyberaudit"), j(".agent", "skills", "cyberaudit")],
+    commandPaths: [j(".gemini", "antigravity", "commands"), j(".agent", "commands")],
+    workflowPaths: [j(".agent", "workflows")],
+  },
+  "antigravity-cli": {
+    displayName: "Antigravity CLI",
+    skillPaths: [j(".gemini", "antigravity-cli", "skills", "cyberaudit")],
+    commandPaths: [j(".gemini", "antigravity-cli", "commands")],
+  },
+  "copilot": {
+    displayName: "GitHub Copilot",
+    skillPaths: [j(".copilot", "skills", "cyberaudit"), j(".github", "copilot", "skills", "cyberaudit")],
+    commandPaths: [j(".copilot", "commands"), j(".github", "copilot", "commands")],
+  },
+  "kiro": {
+    displayName: "Kiro",
+    skillPaths: [j(".kiro", "skills", "cyberaudit")],
+    commandPaths: [j(".kiro", "commands")],
+  },
+  "codex": {
+    displayName: "Codex CLI",
+    skillPaths: [j(".codex", "skills", "cyberaudit")],
+    commandPaths: [j(".codex", "commands")],
+  },
+  "qoder": {
+    displayName: "Qoder",
+    skillPaths: [j(".qoder", "skills", "cyberaudit")],
+    commandPaths: [j(".qoder", "commands")],
+  },
+  "roocode": {
+    displayName: "Roo Code",
+    skillPaths: [j(".roo", "skills", "cyberaudit"), j(".roocode", "skills", "cyberaudit")],
+    commandPaths: [j(".roo", "commands"), j(".roocode", "commands")],
+  },
+  "gemini": {
+    displayName: "Gemini CLI",
+    skillPaths: [j(".gemini", "skills", "cyberaudit")],
+    commandPaths: [j(".gemini", "commands")],
+  },
+  "trae": {
+    displayName: "Trae",
+    skillPaths: [j(".trae", "skills", "cyberaudit")],
+    commandPaths: [j(".trae", "commands")],
+  },
+  "continue": {
+    displayName: "Continue",
+    skillPaths: [j(".continue", "skills", "cyberaudit")],
+    commandPaths: [j(".continue", "commands")],
+  },
+  "codebuddy": {
+    displayName: "CodeBuddy",
+    skillPaths: [j(".codebuddy", "skills", "cyberaudit")],
+    commandPaths: [j(".codebuddy", "commands")],
+  },
+  "droid": {
+    displayName: "Droid (Factory)",
+    skillPaths: [j(".factory", "skills", "cyberaudit"), j(".factory", "droid", "skills", "cyberaudit")],
+    commandPaths: [j(".factory", "commands"), j(".factory", "droid", "commands")],
+  },
+  "kilocode": {
+    displayName: "KiloCode",
+    skillPaths: [j(".kilocode", "skills", "cyberaudit"), j(".kilo", "skills", "cyberaudit")],
+    commandPaths: [j(".kilocode", "commands"), j(".kilo", "commands")],
+  },
+  "warp": {
+    displayName: "Warp",
+    skillPaths: [j(".warp", "skills", "cyberaudit")],
+    commandPaths: [j(".warp", "commands")],
+  },
+  "augment": {
+    displayName: "Augment",
+    skillPaths: [j(".augment", "skills", "cyberaudit")],
+    commandPaths: [j(".augment", "commands")],
+  },
+  "codewhale": {
+    displayName: "CodeWhale",
+    skillPaths: [j(".codewhale", "skills", "cyberaudit")],
+    commandPaths: [j(".codewhale", "commands")],
+  },
+  "cline": {
+    displayName: "Cline",
+    skillPaths: [j(".cline", "skills", "cyberaudit")],
+    commandPaths: [j(".cline", "commands")],
+  },
+  "aider": {
+    displayName: "Aider",
+    skillPaths: [j(".aider", "skills", "cyberaudit")],
+    commandPaths: [j(".aider", "commands")],
+  },
 };
 
-function isSafePath(p: string): boolean {
-  const home = resolve(homedir());
+// Backward compat: old AGENT_TARGETS used only for simple lookup
+export const AGENT_TARGETS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(AGENT_CONFIG).map(([k, v]) => [k, v.skillPaths])
+);
+
+// Paths that are safe to write (must be inside HOME)
+function isSafeInsideHome(p: string): boolean {
+  const home = resolve(H);
   const resolved = resolve(p);
-  return resolved.startsWith(home) && resolved.includes("cyberaudit");
+  return resolved.startsWith(home);
+}
+
+function isSafeSkillPath(p: string): boolean {
+  return isSafeInsideHome(p) && p.includes("cyberaudit");
+}
+
+function isSafeCommandPath(p: string): boolean {
+  // Commands can be without cyberaudit in path, but must be inside HOME and be known command dir
+  if (!isSafeInsideHome(p)) return false;
+  // allow if path contains commands or workflows or skills
+  return p.includes("commands") || p.includes("workflows") || p.includes("skills");
 }
 
 function detectInstalledAgents(): Agent[] {
   const found: Agent[] = [];
-  const skipDetection = new Set(["cursor", "gemini", "antigravity", "antigravity-cli"]);
-  for (const [agent, paths] of Object.entries(AGENT_TARGETS)) {
-    if (skipDetection.has(agent)) continue;
-    if (paths.some((p) => existsSync(dirname(p)))) {
-      found.push(agent as Agent);
+  for (const [agent, cfg] of Object.entries(AGENT_CONFIG) as [Agent, AgentConfig][]) {
+    // If any of skillPaths parent dir exists, or commandPaths parent exists, or mcpPath parent exists
+    const checkPaths = [
+      ...cfg.skillPaths.map(p => dirname(p)),
+      ...cfg.commandPaths.map(p => p),
+      ...(cfg.workflowPaths || []).map(p => p),
+      ...(cfg.mcpPath ? [dirname(cfg.mcpPath)] : []),
+    ];
+    if (checkPaths.some(parent => existsSync(parent) || existsSync(dirname(parent)))) {
+      // More precise: check if parent of parent exists (e.g., ~/.claude exists)
+      if (checkPaths.some(parent => existsSync(parent))) {
+        found.push(agent);
+      } else {
+        // Fallback: check grandparent e.g., ~/.claude exists for ~/.claude/skills
+        const grandParents = cfg.skillPaths.map(p => join(H, p.split('/')[1] || ''));
+        // Actually check home subfolders existence via first level
+        const firstLevel = cfg.skillPaths[0].split('/').slice(0,3).join('/');
+        if (existsSync(firstLevel) || existsSync(join(H, `.${agent.split('-')[0]}`))) {
+          // not perfect, skip to avoid false positives
+        }
+      }
     }
   }
-  if (existsSync(join(homedir(), ".cursor"))) found.push("cursor");
-  if (existsSync(join(homedir(), ".gemini"))) found.push("gemini");
-  if (existsSync(join(homedir(), ".gemini", "antigravity"))) found.push("antigravity");
-  if (existsSync(join(homedir(), ".gemini", "antigravity-cli"))) found.push("antigravity-cli");
+  // Always include opencode if ~/.agents exists, cursor if ~/.cursor exists, etc. (legacy behavior)
+  if (existsSync(j(".agents"))) {
+    if (!found.includes("opencode" as Agent)) found.push("opencode" as Agent);
+  }
+  if (existsSync(j(".claude"))) {
+    if (!found.includes("claude-code" as Agent)) found.push("claude-code" as Agent);
+  }
+  if (existsSync(j(".cursor"))) {
+    if (!found.includes("cursor" as Agent)) found.push("cursor" as Agent);
+  }
+  // Ensure uniqueness
+  return [...new Set(found)];
+}
+
+// Safer detection: check if agent's home folder exists at all (e.g., ~/.claude, ~/.cursor, etc.)
+function detectByHomeFolders(): Agent[] {
+  const mapping: Record<string, Agent> = {
+    ".agents": "opencode",
+    ".claude": "claude-code",
+    ".cursor": "cursor",
+    ".windsurf": "windsurf",
+    ".codeium": "windsurf",
+    ".agent": "antigravity",
+    ".copilot": "copilot",
+    ".kiro": "kiro",
+    ".codex": "codex",
+    ".qoder": "qoder",
+    ".roo": "roocode",
+    ".roocode": "roocode",
+    ".gemini": "gemini",
+    ".trae": "trae",
+    ".continue": "continue",
+    ".codebuddy": "codebuddy",
+    ".factory": "droid",
+    ".kilocode": "kilocode",
+    ".kilo": "kilocode",
+    ".warp": "warp",
+    ".augment": "augment",
+    ".codewhale": "codewhale",
+    ".cline": "cline",
+    ".aider": "aider",
+  };
+  const found: Agent[] = [];
+  for (const [folder, agent] of Object.entries(mapping)) {
+    if (existsSync(j(folder))) {
+      if (!found.includes(agent as Agent)) found.push(agent as Agent);
+    }
+  }
+  // Special: .agents for opencode already, .config/opencode also
+  if (existsSync(j(".config", "opencode"))) {
+    if (!found.includes("opencode")) found.push("opencode");
+  }
   return found;
 }
 
-function installDir(src: string, dst: string): void {
-  if (!existsSync(src)) {
-    throw new Error(`Source not found: ${src}`);
-  }
-  if (!isSafePath(dst)) {
+function installDir(src: string, dst: string, allowCommandPath = false): void {
+  if (!existsSync(src)) throw new Error(`Source not found: ${src}`);
+  const safeCheck = allowCommandPath ? isSafeCommandPath : isSafeSkillPath;
+  if (!safeCheck(dst)) {
     console.error(`✗ Unsafe destination blocked: ${dst}`);
     throw new Error(`Unsafe path: ${dst}`);
   }
@@ -65,67 +302,128 @@ function installDir(src: string, dst: string): void {
   cpSync(src, dst, { recursive: true });
 }
 
-function installSkill(targetDir: string, agent: string, dryRun: boolean): boolean {
+function installCommands(commandFiles: string[], targetDir: string, dryRun: boolean, agentName: string): void {
+  const safe = isSafeCommandPath(targetDir);
+  if (!safe) {
+    console.error(`  ✗ Unsafe command destination blocked: ${targetDir}`);
+    return;
+  }
+  if (dryRun) {
+    console.log(`  → Would install ${commandFiles.length} commands to ${targetDir} (--dry-run)`);
+    return;
+  }
+  mkdirSync(targetDir, { recursive: true });
+  // Remove stale audit commands only (keep other commands like ui-ux-pro-max, caveman etc.)
+  try {
+    if (existsSync(targetDir)) {
+      const stale = readdirSync(targetDir).filter(f => typeof f === "string" && f.startsWith("audit") && f.endsWith(".md"));
+      if (stale.length > 0) {
+        console.log(`  ♻️  Removing ${stale.length} stale audit commands from ${agentName}: ${stale.join(", ")}`);
+        for (const f of stale) {
+          try { unlinkSync(join(targetDir, f)); } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  const cmdSrcDir = COMMANDS_SRC;
+  for (const fileName of commandFiles) {
+    const src = join(cmdSrcDir, fileName);
+    if (!existsSync(src)) continue;
+    const dst = join(targetDir, fileName);
+    try {
+      mkdirSync(dirname(dst), { recursive: true });
+      copyFileSync(src, dst);
+    } catch (e: any) {
+      console.error(`  ✗ Failed to copy command ${fileName} to ${targetDir}: ${e.message}`);
+    }
+  }
+  console.log(`  ✓ Commands (${commandFiles.length}) installed to ${agentName} (${targetDir}) — typing "/" will show ${commandFiles.length} main commands`);
+}
+
+function installSkillForAgent(agent: Agent, dryRun: boolean): boolean {
+  const cfg = AGENT_CONFIG[agent];
+  if (!cfg) {
+    console.error(`Unknown agent: ${agent}`);
+    return false;
+  }
+
   if (!existsSync(SKILL_SRC)) {
     console.error(`✗ Skill source not found at ${SKILL_SRC}.`);
     return false;
   }
 
   if (dryRun) {
-    console.log(`  → Would install to ${targetDir} (--dry-run)`);
+    for (const sp of cfg.skillPaths) {
+      console.log(`  → Would install skill to ${sp} (--dry-run)`);
+    }
+    for (const cp of cfg.commandPaths) {
+      console.log(`  → Would install ${MAIN_COMMANDS.length} main commands to ${cp} (--dry-run)`);
+    }
+    if (cfg.workflowPaths) {
+      for (const wp of cfg.workflowPaths) {
+        console.log(`  → Would install ${MAIN_COMMANDS.length} workflows to ${wp} (--dry-run)`);
+      }
+    }
+    if (cfg.mcpPath) {
+      console.log(`  → Would configure MCP at ${cfg.mcpPath} (--dry-run)`);
+    }
     return true;
   }
 
-  try {
-    // Wipe + re-copy skill dir so stale files are cleaned up
-    installDir(SKILL_SRC, targetDir);
-    console.log(`  ✓ Installed at ${targetDir}`);
-  } catch (e: any) {
-    console.error(`  ✗ Failed to install at ${targetDir}: ${e.message}`);
-    return false;
-  }
+  let ok = false;
 
-  // Install command + skill files for opencode
-  if (agent === "opencode") {
-    const opencodeConf = join(homedir(), ".config", "opencode");
-
-    const cmdSrc = join(PKG_ROOT, "skills", "cyberaudit", "commands");
-    if (existsSync(cmdSrc)) {
-      // Remove stale audit command files only, warn before
-      const cmdDst = join(opencodeConf, "commands");
-      if (existsSync(cmdDst)) {
-        const stale = readdirSync(cmdDst).filter((f) => typeof f === "string" && f.startsWith("audit") && f.endsWith(".md"));
-        if (stale.length > 0) {
-          console.log(`  ♻️  Removing ${stale.length} stale audit commands from opencode: ${stale.join(", ")}`);
-          for (const f of stale) {
-            try { unlinkSync(join(cmdDst, f)); } catch {}
-          }
-        }
-      }
-      mkdirSync(cmdDst, { recursive: true });
-      cpSync(cmdSrc, cmdDst, { recursive: true });
-      console.log(`  ✓ Commands installed to opencode (${cmdDst})`);
-    }
-
-    // Wipe + re-copy opencode skill dir
-    const opencodeSkillDst = join(opencodeConf, "skills", "cyberaudit");
+  // Install skill to all skillPaths
+  for (const skillPath of cfg.skillPaths) {
     try {
-      if (isSafePath(opencodeSkillDst)) {
-        installDir(SKILL_SRC, opencodeSkillDst);
-        console.log(`  ✓ Skill installed to opencode (${opencodeSkillDst})`);
-      }
+      installDir(SKILL_SRC, skillPath, false);
+      console.log(`  ✓ Skill installed at ${skillPath}`);
+      ok = true;
     } catch (e: any) {
-      console.error(`  ✗ Failed opencode secondary install: ${e.message}`);
+      console.error(`  ✗ Failed skill install at ${skillPath}: ${e.message}`);
     }
   }
 
-  return true;
+  // Install MAIN_COMMANDS to commandPaths (for "/" menu)
+  // For opencode, install ALL commands (60) to preserve full autocomplete
+  const isOpenCode = agent === "opencode";
+  const commandsToInstall = isOpenCode ? readdirSync(COMMANDS_SRC).filter(f => f.endsWith('.md')) : MAIN_COMMANDS;
+
+  for (const cmdPath of cfg.commandPaths) {
+    try {
+      installCommands(commandsToInstall, cmdPath, dryRun, agent);
+      ok = true;
+    } catch (e: any) {
+      console.error(`  ✗ Failed commands install at ${cmdPath}: ${e.message}`);
+    }
+  }
+
+  // Install to workflowPaths for Windsurf/Antigravity style
+  if (cfg.workflowPaths) {
+    for (const wfPath of cfg.workflowPaths) {
+      try {
+        installCommands(commandsToInstall, wfPath, dryRun, agent);
+        ok = true;
+      } catch (e: any) {
+        console.error(`  ✗ Failed workflow install at ${wfPath}: ${e.message}`);
+      }
+    }
+  }
+
+  // MCP for Cursor
+  if (agent === "cursor" && cfg.mcpPath) {
+    const cursorOk = installForCursor(dryRun);
+    ok = ok || cursorOk;
+  }
+
+  return ok;
 }
 
 function installForCursor(dryRun: boolean): boolean {
   const cursorDir = join(homedir(), ".cursor");
   if (!existsSync(cursorDir)) {
-    console.log("  ~ Cursor not found (no ~/.cursor/) — skipping");
+    console.log("  ~ Cursor not found (no ~/.cursor/) — skipping MCP, but commands may still install");
+    // Don't fail, because command install may have succeeded
     return false;
   }
 
@@ -161,7 +459,6 @@ function installForCursor(dryRun: boolean): boolean {
     return true;
   }
 
-  // Backup before write
   if (existsSync(mcpPath)) {
     try {
       const bak = `${mcpPath}.bak`;
@@ -185,30 +482,18 @@ function installForCursor(dryRun: boolean): boolean {
   }
 }
 
-function installForAgent(agent: Agent, dryRun: boolean): boolean {
-  switch (agent) {
-    case "cursor":
-      return installForCursor(dryRun);
-    default: {
-      const paths = AGENT_TARGETS[agent];
-      if (!paths?.length) return false;
-      return installSkill(paths[0], agent, dryRun);
-    }
-  }
-}
-
 async function main() {
   const program = new Command();
 
   program
     .name("cyberaudit-skill")
-    .description("CyberAudit Skill — universal security audit skill for AI agents")
+    .description("CyberAudit Skill — universal security audit skill for AI agents (22 agents supported, like ui-ux-pro)")
     .version(VERSION);
 
   program
     .command("install")
-    .description("Install CyberAudit Skill for AI agent(s)")
-    .option("-a, --agent <agent>", "Target: opencode, claude-code, kiro, cursor, gemini, or all", "all")
+    .description("Install CyberAudit Skill for AI agent(s) — supports 22 agents like ui-ux-pro-max-skill")
+    .option("-a, --agent <agent>", "Target: opencode, claude-code, cursor, windsurf, copilot, kiro, codex, qoder, roocode, gemini, trae, continue, codebuddy, droid, kilocode, warp, augment, codewhale, cline, aider, or all", "all")
     .option("--dry-run", "Show changes without applying", false)
     .action((options) => {
       const dryRun = !!options.dryRun;
@@ -216,15 +501,19 @@ async function main() {
 
       let agents: Agent[];
       if (agentOpt === "all") {
-        agents = detectInstalledAgents();
+        const byFolder = detectByHomeFolders();
+        const byLegacy = detectInstalledAgents();
+        agents = [...new Set([...byFolder, ...byLegacy])] as Agent[];
         if (agents.length === 0) {
-          console.log("No supported AI agents detected. Checked ~/.agents, ~/.claude, ~/.cursor, ~/.kiro, ~/.gemini");
-          console.log("Try: --agent opencode  or  --agent claude-code  or  --agent cursor");
+          console.log("No supported AI agents detected. Checked:");
+          console.log("  ~/.claude, ~/.cursor, ~/.windsurf, ~/.agent, ~/.copilot, ~/.kiro, ~/.codex, ~/.qoder, ~/.roo, ~/.gemini, ~/.trae, ~/.agents, ~/.continue, ~/.codebuddy, ~/.factory, ~/.kilocode, ~/.warp, ~/.augment, ~/.codewhale, ~/.cline, ~/.aider");
+          console.log("\nTry: --agent opencode  or  --agent claude-code  or  --agent all");
+          console.log("\nOr install manually: copy skills/cyberaudit to <agent>/skills/");
           process.exit(1);
         }
-        console.log(`Detected agents: ${agents.join(", ")}`);
+        console.log(`Detected agents (${agents.length}): ${agents.join(", ")}`);
       } else {
-        const valid: Agent[] = ["opencode", "claude-code", "kiro", "cursor", "gemini", "antigravity", "antigravity-cli"];
+        const valid = Object.keys(AGENT_CONFIG) as Agent[];
         if (!valid.includes(agentOpt as Agent)) {
           console.error(`Unknown agent: "${agentOpt}". Valid: ${valid.join(", ")}, all`);
           process.exit(1);
@@ -233,21 +522,27 @@ async function main() {
       }
 
       const label = dryRun ? " (dry run)" : "";
-      console.log(`\n═══ CyberAudit v${VERSION} Installation${label} ═══\n`);
+      console.log(`\n═══ CyberAudit v${VERSION} Installation${label} — ${agents.length} agents — like ui-ux-pro ═══\n`);
+      console.log(`Main commands for "/" menu: ${MAIN_COMMANDS.map(f=>f.replace('.md','')).join(', ')}\n`);
 
       let ok = 0, fail = 0;
       for (const agent of agents) {
-        console.log(`\n→ ${agent}:`);
-        if (installForAgent(agent, dryRun)) ok++; else fail++;
+        const cfg = AGENT_CONFIG[agent];
+        console.log(`\n→ ${cfg.displayName} (${agent}):`);
+        if (installSkillForAgent(agent, dryRun)) ok++; else fail++;
       }
 
       console.log(`\nDone. ${ok} configured, ${fail} skipped/failed.\n`);
-      if (!dryRun && ok > 0) console.log("Verify: npx -y cyberaudit-skill list\n");
+      if (!dryRun && ok > 0) {
+        console.log(`Verify: npx -y cyberaudit-skill list`);
+        console.log(`Tip: Type "/" in your agent — you should see: ${MAIN_COMMANDS.slice(0,4).map(f=>'/'+f.replace('.md','').replace('audit-','audit:')).join(', ')}... (${MAIN_COMMANDS.length} commands)`);
+        console.log();
+      }
     });
 
   program
     .command("list")
-    .description("List audits and installed agents")
+    .description("List audits and installed agents (22 agents)")
     .action(() => {
       console.log(`\n═══ CyberAudit v${VERSION} — Available Audits ═══\n`);
       console.log("  cyberaudit-web       OWASP web app security audit");
@@ -255,29 +550,37 @@ async function main() {
       console.log("  cyberaudit-api       API security audit (REST/GraphQL/WS)");
       console.log("  cyberaudit-cloud     Cloud config audit (S3, IAM, SG, storage)");
       console.log("  cyberaudit-full      Full stack (web + API + cloud)");
-      console.log("  cyberaudit-quick     Quick vulnerability scan (secrets + criticals)\n");
-      console.log("═══ Installed Agents ═══\n");
-      for (const [agent] of Object.entries(AGENT_TARGETS)) {
-        if (agent === "cursor") {
-          const mcpPath = join(homedir(), ".cursor", "mcp.json");
-          let ok = false;
+      console.log("  cyberaudit-quick     Quick vulnerability scan (secrets + criticals) — deterministic\n");
+      console.log(`═══ Supported Agents (${Object.keys(AGENT_CONFIG).length}) — like ui-ux-pro-max-skill ═══\n`);
+      for (const [agentKey, cfg] of Object.entries(AGENT_CONFIG) as [Agent, AgentConfig][]) {
+        let installed = false;
+        let loc = "";
+        // Check skill paths
+        for (const sp of cfg.skillPaths) {
+          if (existsSync(sp)) { installed = true; loc = sp; break; }
+        }
+        // Check command paths if not found
+        if (!installed) {
+          for (const cp of cfg.commandPaths) {
+            if (existsSync(cp)) {
+              const files = readdirSync(cp).filter(f => f.startsWith('audit'));
+              if (files.length > 0) { installed = true; loc = `${cp} (${files.length} cmds)`; break; }
+            }
+          }
+        }
+        // Check MCP for cursor
+        if (!installed && cfg.mcpPath && existsSync(cfg.mcpPath)) {
           try {
-            if (existsSync(mcpPath)) {
-              ok = readFileSync(mcpPath, "utf-8").includes("cyberaudit-skill");
+            if (readFileSync(cfg.mcpPath, 'utf-8').includes('cyberaudit-skill')) {
+              installed = true;
+              loc = cfg.mcpPath;
             }
           } catch {}
-          console.log(`  ${ok ? "✓" : "✗"} ${agent}${ok ? ` (${mcpPath})` : ""}`);
-        } else {
-          const paths = AGENT_TARGETS[agent as Agent];
-          let ok = false;
-          let foundPath = "";
-          for (const p of paths) {
-            if (existsSync(p)) { ok = true; foundPath = p; break; }
-          }
-          console.log(`  ${ok ? "✓" : "✗"} ${agent}${ok ? ` (${foundPath})` : ""}`);
         }
+        console.log(`  ${installed ? "✓" : "✗"} ${cfg.displayName.padEnd(20)} (${agentKey})${installed ? ` — ${loc}` : ""}`);
       }
-      console.log();
+      console.log(`\nMain "/" commands: ${MAIN_COMMANDS.map(f=>f.replace('.md','')).join(', ')}`);
+      console.log(`Total commands available: ${readdirSync(COMMANDS_SRC).length} (8 main shown on "/")\n`);
     });
 
   program
@@ -294,7 +597,7 @@ async function main() {
       console.error(`[CyberAudit] Scanning ${scanTarget} [type=${type}]... (${VERSION})`);
 
       try {
-        const allFindings: any[] = [];
+        let allFindings: any[] = [];
         let secretFindings: any[] = [];
         let webFindings: any[] = [];
 
@@ -356,7 +659,6 @@ async function main() {
         findings = parsed.findings || parsed;
         scanTarget = parsed.target || scanTarget;
       } else {
-        // Auto-scan
         console.error(`[CyberAudit] No input file, running scan on ${scanTarget}...`);
         const secrets = scanSecrets(resolve(scanTarget));
         const web = scanWeb(resolve(scanTarget));

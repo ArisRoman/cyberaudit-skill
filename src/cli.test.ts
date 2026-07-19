@@ -14,13 +14,13 @@ describe('CLI Installer Safety', () => {
   });
 
   it('isSafePath should block paths outside HOME containing cyberaudit', async () => {
-    // Import dynamically to avoid side effects
     const cliPath = join(process.cwd(), 'src', 'cli.ts');
     const content = readFileSync(cliPath, 'utf-8');
-    // Check that isSafePath exists and checks homedir
-    expect(content).toContain('isSafePath');
+    // New version uses isSafeInsideHome, isSafeSkillPath, isSafeCommandPath
+    expect(content).toMatch(/isSafe.*Path/);
     expect(content).toContain('homedir');
     expect(content).toContain('cyberaudit');
+    expect(content).toContain('isSafeInsideHome');
   });
 
   it('installDir should exist as function', () => {
@@ -70,5 +70,43 @@ describe('Cloud module completeness', () => {
   });
   it('cloud report template exists', () => {
     expect(existsSync(join(process.cwd(), 'skills', 'cyberaudit', 'reports', 'REPORT-TEMPLATE-CLOUD.md'))).toBe(true);
+  });
+});
+
+describe('Multi-agent support (like ui-ux-pro)', () => {
+  it('should support at least 15 agents', () => {
+    const content = readFileSync(join(process.cwd(), 'src', 'cli.ts'), 'utf-8');
+    // Count Agent union type entries
+    const match = content.match(/type Agent =([\s\S]*?);/);
+    expect(match).toBeTruthy();
+    const agents = match![1].split('|').map(s => s.trim()).filter(Boolean);
+    expect(agents.length).toBeGreaterThanOrEqual(15);
+  });
+
+  it('should have MAIN_COMMANDS 8 for \"/\" menu', () => {
+    const content = readFileSync(join(process.cwd(), 'src', 'cli.ts'), 'utf-8');
+    expect(content).toContain('MAIN_COMMANDS');
+    // Should contain 8 entries
+    const mainMatch = content.match(/const MAIN_COMMANDS = \[([\s\S]*?)\];/);
+    expect(mainMatch).toBeTruthy();
+    const count = (mainMatch![1].match(/\.md/g) || []).length;
+    expect(count).toBe(8);
+  });
+
+  it('should define AGENT_CONFIG for many agents', () => {
+    const content = readFileSync(join(process.cwd(), 'src', 'cli.ts'), 'utf-8');
+    expect(content).toContain('AGENT_CONFIG');
+    expect(content).toContain('claude-code');
+    expect(content).toContain('cursor');
+    expect(content).toContain('windsurf');
+    expect(content).toContain('copilot');
+    expect(content).toContain('codex');
+    expect(content).toContain('continue');
+  });
+
+  it('should install commands for \"/\" menu', () => {
+    const content = readFileSync(join(process.cwd(), 'src', 'cli.ts'), 'utf-8');
+    expect(content).toContain('installCommands');
+    expect(content).toContain('typing "/" will show');
   });
 });

@@ -56,15 +56,22 @@ function installSkill(targetDir: string, agent: string, dryRun: boolean): boolea
   cpSync(SKILL_SRC, targetDir, { recursive: true });
   console.log(`  ✓ Installed at ${targetDir}`);
 
-  // Install command files for opencode
+  // Install command + skill files for opencode
   if (agent === "opencode") {
-    const cmdDir = join(homedir(), ".config", "opencode", "commands");
+    const opencodeConf = join(homedir(), ".config", "opencode");
+
+    const cmdDir = join(opencodeConf, "commands");
     const cmdSrc = join(PKG_ROOT, "skills", "cyberaudit", "commands");
     if (existsSync(cmdSrc)) {
       mkdirSync(cmdDir, { recursive: true });
       cpSync(cmdSrc, cmdDir, { recursive: true });
       console.log(`  ✓ Commands installed to opencode`);
     }
+
+    const skillDir = join(opencodeConf, "skills", "cyberaudit");
+    mkdirSync(skillDir, { recursive: true });
+    cpSync(SKILL_SRC, skillDir, { recursive: true });
+    console.log(`  ✓ Skill installed to opencode`);
   }
 
   return true;

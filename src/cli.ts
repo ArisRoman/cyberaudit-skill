@@ -39,16 +39,10 @@ function detectInstalledAgents(): Agent[] {
   return found;
 }
 
-function installSkill(targetDir: string, dryRun: boolean): boolean {
+function installSkill(targetDir: string, agent: string, dryRun: boolean): boolean {
   if (!existsSync(SKILL_SRC)) {
     console.error(`✗ Skill source not found at ${SKILL_SRC}.`);
     return false;
-  }
-
-  const skillMdOk = existsSync(targetDir) && existsSync(join(targetDir, "SKILL.md"));
-  if (skillMdOk) {
-    console.log(`  ✓ Already installed at ${targetDir}`);
-    return true;
   }
 
   if (dryRun) {
@@ -56,9 +50,22 @@ function installSkill(targetDir: string, dryRun: boolean): boolean {
     return true;
   }
 
+  // Install/update skill files
   mkdirSync(targetDir, { recursive: true });
   cpSync(SKILL_SRC, targetDir, { recursive: true });
-  console.log(`  ✓ Installed at ${targetDir} (${readdirSync(targetDir).length} files)`);
+  console.log(`  ✓ Installed at ${targetDir}`);
+
+  // Install command files for opencode
+  if (agent === "opencode") {
+    const cmdDir = join(homedir(), ".config", "opencode", "commands");
+    const cmdSrc = join(PKG_ROOT, "skills", "cyberaudit", "commands");
+    if (existsSync(cmdSrc)) {
+      mkdirSync(cmdDir, { recursive: true });
+      cpSync(cmdSrc, cmdDir, { recursive: true });
+      console.log(`  ✓ Commands installed to opencode`);
+    }
+  }
+
   return true;
 }
 
@@ -103,7 +110,7 @@ function installForAgent(agent: Agent, dryRun: boolean): boolean {
     default: {
       const paths = AGENT_TARGETS[agent];
       if (!paths?.length) return false;
-      return installSkill(paths[0], dryRun);
+      return installSkill(paths[0], agent, dryRun);
     }
   }
 }

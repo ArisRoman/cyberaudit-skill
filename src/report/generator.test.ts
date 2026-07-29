@@ -65,6 +65,32 @@ describe('Report Generator', () => {
     expect(out.markdown).toContain('NO-GO');
   });
 
+  it('should generate differential report sections when baseline is provided', () => {
+    const baselineFindings: UnifiedFinding[] = [
+      { id: '1', patternId: 'WEB_EVAL', scanner: 'web', severity: 'CRITICAL', cvss: 9.8, cvssVector: 'CVSS:3.1/...', file: 'bad.js', line: 1, match: 'eval(', description: 'eval', remediation: 'remove', owasp: 'A03' } as any,
+      { id: '2', patternId: 'DATABASE_URL', scanner: 'secrets', severity: 'CRITICAL', cvss: 9.0, cvssVector: 'CVSS:3.1/...', file: 'db.js', line: 5, match: 'postgres://', description: 'db', remediation: 'fix', owasp: 'A07' } as any,
+    ];
+    const currentFindings: UnifiedFinding[] = [
+      { id: '1', patternId: 'WEB_EVAL', scanner: 'web', severity: 'CRITICAL', cvss: 9.8, cvssVector: 'CVSS:3.1/...', file: 'bad.js', line: 1, match: 'eval(', description: 'eval', remediation: 'remove', owasp: 'A03' } as any,
+      { id: '3', patternId: 'AWS_ACCESS_KEY', scanner: 'secrets', severity: 'CRITICAL', cvss: 9.1, cvssVector: 'CVSS:3.1/...', file: 'aws.js', line: 2, match: 'AKIA...', description: 'aws', remediation: 'fix', owasp: 'A07' } as any,
+    ];
+
+    const out = generateReport({
+      target: '.',
+      version: '3.1.5',
+      type: 'web',
+      findings: currentFindings,
+      baselineFindings,
+    });
+
+    expect(out.markdown).toContain('DIFFERENTIAL SECURITY DASHBOARD');
+    expect(out.markdown).toContain('NEW FINDINGS');
+    expect(out.markdown).toContain('FIXED FINDINGS');
+    expect(out.markdown).toContain('UNCHANGED FINDINGS');
+    expect(out.markdown).toContain('AWS_ACCESS_KEY');
+    expect(out.markdown).toContain('DATABASE_URL');
+  });
+
   it('should contain bar visualization', () => {
     const out = generateReport({ target: '.', version: '3.1.5', type: 'web', findings: [] });
     expect(out.markdown).toContain('█');

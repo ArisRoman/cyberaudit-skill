@@ -20,6 +20,7 @@ export interface ReportInput {
   version: string;
   type: 'web' | 'api' | 'mobile' | 'cloud' | 'full';
   findings: UnifiedFinding[];
+  baselineFindings?: UnifiedFinding[];
   framework?: string;
   date?: string;
 }

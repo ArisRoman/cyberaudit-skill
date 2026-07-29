@@ -71,6 +71,30 @@ describe('Web Scanner', () => {
     expect(findings.length).toBe(0);
   });
 
+  it('should detect open redirect', () => {
+    writeFileSync(join(tmp, 'redirect.js'), 'res.redirect(req.query.url);');
+    const findings = scanWeb(tmp);
+    expect(findings.some(f => f.patternId === 'WEB_OPEN_REDIRECT')).toBe(true);
+  });
+
+  it('should detect path traversal', () => {
+    writeFileSync(join(tmp, 'file.js'), 'fs.readFile(req.query.path);');
+    const findings = scanWeb(tmp);
+    expect(findings.some(f => f.patternId === 'WEB_PATH_TRAVERSAL')).toBe(true);
+  });
+
+  it('should detect XXE injection', () => {
+    writeFileSync(join(tmp, 'xml.js'), 'xml2js.parseString(req.body.xml);');
+    const findings = scanWeb(tmp);
+    expect(findings.some(f => f.patternId === 'WEB_XXE')).toBe(true);
+  });
+
+  it('should detect SSRF', () => {
+    writeFileSync(join(tmp, 'request.js'), 'axios.get(req.query.target);');
+    const findings = scanWeb(tmp);
+    expect(findings.some(f => f.patternId === 'WEB_SSRF')).toBe(true);
+  });
+
   it('should have at least 10 patterns', async () => {
     const { WEB_PATTERNS } = await import('./web.js');
     expect(WEB_PATTERNS.length).toBeGreaterThanOrEqual(10);

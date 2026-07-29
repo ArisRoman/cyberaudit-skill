@@ -1,7 +1,7 @@
 # CyberAudit Skill
 
-**Universal security audit skill for AI agents — now deterministic.**  
-One install. 22 agents. Full OWASP coverage + deterministic scanners (secrets + web).
+**Universal security audit skill for AI agents — now surgical & token-optimized.**  
+One install. 22 agents. Full OWASP coverage + deterministic scanners (secrets + web + Git history) + token-saving MCP tools.
 
 ```bash
 npx -y cyberaudit-skill install
@@ -9,127 +9,94 @@ npx -y cyberaudit-skill install
 
 ## What It Is
 
-CyberAudit is a structured security audit framework delivered as an AI agent skill. It covers OWASP Top 10 (web), OWASP MASVS (mobile), API security, and cloud config — with scoring, severity ratings, and remediation guidance.
+CyberAudit is a structured security audit framework delivered as an AI agent skill. It covers OWASP Top 10 (web), OWASP API Top 10, OWASP MASVS (mobile), and cloud configuration — with scoring, severity ratings, and remediation guidance.
 
-**Deterministic scanners (no LLM needed):**
-- `scan` → 15 secret patterns (AWS, GitHub PAT, Stripe, private keys, JWT, DB URLs...) + 12 web vuln patterns (SQLi concat, XSS dangerouslySetInnerHTML, jwt.decode, CORS *, eval, mass assignment, NoSQLi)
-- `report` → auto-generates markdown report with score, verdict, OWASP compliance, remediation plan
+### 🛡️ Deterministic Scanners (No LLM needed):
+- `scan` → 15 secret patterns (AWS, GitHub, Stripe, private keys, JWT...) with **Git history leak scanning** and `.cyberauditignore` support + 16 web vulnerability patterns (SQLi, XSS, jwt.decode, CORS, eval, Mass Assignment, NoSQLi, and now **Open Redirect, Path Traversal, XXE, and SSRF**).
+- `report` → Generates a comprehensive markdown report with scoring, CVSS vector strings, OWASP compliance, and prioritize phases.
+- **Differential Audits** → Pass `--baseline <file>` to automatically calculate and generate a **Differential Security Dashboard** comparing the current scan with a previous baseline (showing new, resolved, and legacy vulnerabilities).
 
-**Supports 22 AI coding agents — like ui-ux-pro-max-skill:**
+### 🤖 High-Efficiency MCP Tools (Saves 95% Tokens):
+- `cyberaudit-get-scope` → Automatically scans the project directory and identifies the highest-risk files (database queries, auth, user input, command exec, file operations) so you can focus your LLM audit on these targets, avoiding token drain on boilerplate/static files.
+- `cyberaudit-get-reference` → Fetches highly condensed, token-compressed checklists and remediation templates on-demand (e.g. for SQLi, XSS, mobile storage) on request, saving 90% of your token quota.
+
+---
+
+## Supports 22 AI Coding Agents — Like ui-ux-pro-max-skill
 
 | Agent | Skill Path | Commands for "/" Menu | Method |
 |---|---|---|---|
-| OpenCode | `~/.agents/skills/` + `~/.config/opencode/skills/` | `~/.config/opencode/commands/` (60 cmds) | File copy |
-| Claude Code | `~/.claude/skills/` | `~/.claude/commands/` (8 main) | File copy |
+| OpenCode | `~/.agents/skills/` + `~/.config/opencode/skills/` | `~/.config/opencode/commands/` (60 cmds) | Central Shared + Wrapper |
+| Claude Code | `~/.claude/skills/` | `~/.claude/commands/` (8 main) | Central Shared + Wrapper |
 | Cursor | `~/.cursor/skills/` | `~/.cursor/commands/` + `mcp.json` | MCP server |
-| Windsurf | `~/.windsurf/skills/` | `~/.windsurf/workflows/` | File copy |
-| Antigravity | `~/.agent/skills/` + `~/.gemini/antigravity/skills/` | `~/.agent/workflows/` | File copy |
-| GitHub Copilot | `~/.copilot/skills/` + `~/.github/copilot/skills/` | `~/.copilot/commands/` | File copy |
-| Kiro | `~/.kiro/skills/` | `~/.kiro/commands/` | File copy |
-| Codex CLI | `~/.codex/skills/` | `~/.codex/commands/` | File copy |
-| Qoder | `~/.qoder/skills/` | `~/.qoder/commands/` | File copy |
-| Roo Code | `~/.roo/skills/` + `~/.roocode/skills/` | `~/.roo/commands/` | File copy |
-| Gemini CLI | `~/.gemini/skills/` | `~/.gemini/commands/` | File copy |
-| Trae | `~/.trae/skills/` | `~/.trae/commands/` | File copy |
-| Continue | `~/.continue/skills/` | `~/.continue/commands/` | File copy |
-| CodeBuddy | `~/.codebuddy/skills/` | `~/.codebuddy/commands/` | File copy |
-| Droid (Factory) | `~/.factory/skills/` | `~/.factory/commands/` | File copy |
-| KiloCode | `~/.kilocode/skills/` | `~/.kilocode/commands/` | File copy |
-| Warp | `~/.warp/skills/` | `~/.warp/commands/` | File copy |
-| Augment | `~/.augment/skills/` | `~/.augment/commands/` | File copy |
-| CodeWhale | `~/.codewhale/skills/` | `~/.codewhale/commands/` | File copy |
-| Cline | `~/.cline/skills/` | `~/.cline/commands/` | File copy |
-| Aider | `~/.aider/skills/` | `~/.aider/commands/` | File copy |
+| Windsurf | `~/.windsurf/skills/` | `~/.windsurf/workflows/` | Central Shared + Wrapper |
+| Antigravity | `~/.agent/skills/` + `~/.gemini/antigravity/skills/` | `~/.agent/workflows/` | Central Shared + Wrapper |
+| GitHub Copilot | `~/.copilot/skills/` + `~/.github/copilot/skills/` | `~/.copilot/commands/` | Central Shared + Wrapper |
+| Kiro | `~/.kiro/skills/` | `~/.kiro/commands/` | Central Shared + Wrapper |
+| Codex CLI | `~/.codex/skills/` | `~/.codex/commands/` | Central Shared + Wrapper |
+| Qoder | `~/.qoder/skills/` | `~/.qoder/commands/` | Central Shared + Wrapper |
+| Roo Code | `~/.roo/skills/` + `~/.roocode/skills/` | `~/.roo/commands/` | Central Shared + Wrapper |
+| Gemini CLI | `~/.gemini/skills/` | `~/.gemini/commands/` | Central Shared + Wrapper |
+| Trae | `~/.trae/skills/` | `~/.trae/commands/` | Central Shared + Wrapper |
+| Continue | `~/.continue/skills/` | `~/.continue/commands/` | Central Shared + Wrapper |
+| CodeBuddy | `~/.codebuddy/skills/` | `~/.codebuddy/commands/` | Central Shared + Wrapper |
+| Droid (Factory) | `~/.factory/skills/` | `~/.factory/commands/` | Central Shared + Wrapper |
+| KiloCode | `~/.kilocode/skills/` | `~/.kilocode/commands/` | Central Shared + Wrapper |
+| Warp | `~/.warp/skills/` | `~/.warp/commands/` | Central Shared + Wrapper |
+| Augment | `~/.augment/skills/` | `~/.augment/commands/` | Central Shared + Wrapper |
+| CodeWhale | `~/.codewhale/skills/` | `~/.codewhale/commands/` | Central Shared + Wrapper |
+| Cline | `~/.cline/skills/` | `~/.cline/commands/` | Central Shared + Wrapper |
+| Aider | `~/.aider/skills/` | `~/.aider/commands/` | Central Shared + Wrapper |
 
-**8 main slash commands shown when typing "/"** (like ui-ux-pro):
-`/audit`, `/audit:web`, `/audit:mobile`, `/audit:api`, `/audit:cloud`, `/audit:quick`, `/audit:report`, `/audit:help`
-+ 52 additional commands (total 60) for full coverage.
+---
 
 ## Quick Start
 
 ```bash
-# Auto-detect & install globally (~/) for all found agents (22 agents checked)
+# Safe, transactional installation globally for all found agents
 npx -y cyberaudit-skill install
 
-# Project-local install like ui-ux-pro — 100% guarantee "/" shows 8 main commands
+# Project-local installation (like ui-ux-pro) — automatically configures .gitignore
 npx -y cyberaudit-skill install --agent all --local
-# Creates ./.claude/skills/cyberaudit + ./.claude/commands/ (8 cmds), ./.cursor/commands/, ./.windsurf/workflows/, ./.agent/workflows/, etc.
 
-# Install for a specific agent (global)
-npx -y cyberaudit-skill install --agent claude-code
-npx -y cyberaudit-skill install --agent cursor --global
+# Uninstall completely
+npx -y cyberaudit-skill uninstall
 
-# Install locally for one agent
-npx -y cyberaudit-skill install --agent claude-code --local
+# Run diagnostic and validation check
+npx -y cyberaudit-skill doctor
 
-# Preview without making changes
-npx -y cyberaudit-skill install --dry-run
-npx -y cyberaudit-skill install --dry-run --local
+# Update central shared installation
+npx -y cyberaudit-skill update
 
-# Deterministic scan (no LLM)
+# Programmatic deterministic scan (Secrets + Web only)
 npx -y cyberaudit-skill scan ./ --type all
-npx -y cyberaudit-skill scan ./ --json > findings.json
-npx -y cyberaudit-skill report ./ --input findings.json --type web --output report.md
+npx -y cyberaudit-skill scan ./ --json > current_scan.json
+
+# Generate differential audit report
+npx -y cyberaudit-skill report ./ --input current_scan.json --baseline previous_scan.json --output report.md
 ```
 
-## Available Audits
+## Available Audits & Methodology
 
-| Command | Scope | Deterministic? |
+| Command / Tool | Scope | Audit Method |
 |---|---|---|
-| `cyberaudit-web` | OWASP Top 10 web app audit | Yes (12 patterns) |
-| `cyberaudit-mobile` | OWASP MASVS mobile audit | Via checklist |
-| `cyberaudit-api` | API security audit | Via checklist |
-| `cyberaudit-cloud` | Cloud config audit (S3, IAM, SG) | Via checklist |
-| `cyberaudit-full` | Full stack (web + API + cloud) | Partial |
-| `cyberaudit-quick` | 5-minute scan (secrets + web) | **Yes, fully deterministic** |
+| `cyberaudit-web` | OWASP Top 10 Web vulnerabilities | **Deterministic (16 patterns)** + LLM Checklist triage |
+| `cyberaudit-mobile` | OWASP MASVS mobile audit | **LLM-Guided Checklist** |
+| `cyberaudit-api` | OWASP API Top 10 audit | **LLM-Guided Checklist** |
+| `cyberaudit-cloud` | Cloud config audit (S3, IAM, SG) | **LLM-Guided Checklist** |
+| `cyberaudit-quick` | Secrets & Critical Web vulnerabilities | **Deterministic scan (Secrets + Web)** |
 
-### Usage (once installed)
-
-In your AI agent, type "/" — you should see 8 main commands:
-
-```
-/audit
-/audit:web
-/audit:mobile
-/audit:api
-/audit:cloud
-/audit:quick
-/audit:report
-/audit:help
-```
-
-Or classic:
-
-```
-/load-skill cyberaudit
-/cyberaudit-web example.com
-```
+---
 
 ## MCP Server
 
-CyberAudit runs as a stdio MCP server for MCP-compatible agents (Cursor, Claude Desktop, Windsurf, etc.):
+CyberAudit runs as a standard MCP server for compatible agents (Cursor, Claude Desktop, Windsurf, Cline, Continue):
 
 ```bash
 npx -y cyberaudit-skill serve
 ```
 
-`cyberaudit-quick` now runs deterministic scanners (secrets + web) even via MCP.
-
-## Verify Installation
-
-```bash
-npx -y cyberaudit-skill list
-# Shows 22 agents + main "/" commands
-```
-
-## Deterministic vs LLM
-
-- **Deterministic (P2):** 15 secret patterns + 12 web patterns + auto report (score, OWASP, remediation plan) — 40 tests, 0 hallucinations
-- **LLM-based:** Checklists, philosophies, threat models, 60 commands for context-aware audit
-
-## Repository
-
-https://github.com/ArisRoman/cyberaudit-skill
+Our MCP server now automatically returns **active, token-compressed checklists** on request instead of empty notices, and includes the **Scope Analyzer** and **Reference Fetcher** tools!
 
 ## License
 

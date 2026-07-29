@@ -78,13 +78,22 @@ function bar(score: number): string {
 }
 
 export function generateReport(input: ReportInput): ReportOutput {
-  const { target, findings, type, version, framework } = input;
+  const { target, findings, baselineFindings, type, version, framework } = input;
   const date = input.date || new Date().toISOString().split('T')[0];
   const score = calculateScore(findings);
   const hasCritical = findings.some(f => f.severity === 'CRITICAL');
   const verdict = getVerdict(score, hasCritical);
   const dashboard = groupBySeverity(findings);
   const owasp = owaspComplianceFromFindings(findings);
+
+  // Diff with baseline calculations
+  const baseline = baselineFindings || [];
+  const currentKeys = new Set(findings.map(f => `${f.patternId}:${f.file}:${f.line}:${f.match}`));
+  const baselineKeys = new Set(baseline.map(f => `${f.patternId}:${f.file}:${f.line}:${f.match}`));
+
+  const newFindings = findings.filter(f => !baselineKeys.has(`${f.patternId}:${f.file}:${f.line}:${f.match}`));
+  const fixedFindings = baseline.filter(f => !currentKeys.has(`${f.patternId}:${f.file}:${f.line}:${f.match}`));
+  const unchangedFindings = findings.filter(f => baselineKeys.has(`${f.patternId}:${f.file}:${f.line}:${f.match}`));
 
   // Sort findings by severity then file
   const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 } as const;
@@ -125,6 +134,31 @@ export function generateReport(input: ReportInput): ReportOutput {
   md += `  41-60 : 🟡 Moderate — Significant fixes before prod\n`;
   md += `  61-80 : 🟢 Good — Some fixes recommended\n`;
   md += `  81-100: ✅ Excellent — Ready for production\n\n`;
+
+  if (baselineFindings) {
+    md += `═══════════════════════════════════════════════════════════════\n`;
+    md += `              DIFFERENTIAL SECURITY DASHBOARD\n`;
+    md += `═══════════════════════════════════════════════════════════════\n\n`;
+    md += `Comparison with baseline containing ${baseline.length} previous findings:\n\n`;
+    md += `  🔴 NEW FINDINGS       : ${newFindings.length} (introduced in this run)\n`;
+    md += `  🟢 FIXED FINDINGS     : ${fixedFindings.length} (resolved since baseline)\n`;
+    md += `  🟡 UNCHANGED FINDINGS : ${unchangedFindings.length} (legacy issues)\n\n`;
+
+    if (newFindings.length > 0) {
+      md += `NEW FINDINGS:\n`;
+      for (const nf of newFindings) {
+        md += `  🔴 [${nf.severity}] ${nf.patternId} in ${nf.file}:${nf.line}\n`;
+      }
+      md += `\n`;
+    }
+    if (fixedFindings.length > 0) {
+      md += `FIXED FINDINGS:\n`;
+      for (const ff of fixedFindings) {
+        md += `  🟢 [RESOLVED] ${ff.patternId} in ${ff.file}:${ff.line}\n`;
+      }
+      md += `\n`;
+    }
+  }
 
   md += `VULNERABILITY DASHBOARD\n`;
   md += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;

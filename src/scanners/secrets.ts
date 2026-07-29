@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, extname } from 'path';
+import { execSync } from 'child_process';
 import { SecretFinding, ScanOptions, Severity } from './types.js';
 
 type Pattern = {
@@ -291,6 +292,71 @@ function walkDir(dir: string, ignore: string[], maxFileSize: number, files: stri
   return files;
 }
 
+export function scanGitHistory(targetPath: string): SecretFinding[] {
+  const findings: SecretFinding[] = [];
+  try {
+    const gitDir = join(targetPath, '.git');
+    if (!existsSync(gitDir)) {
+      return [];
+    }
+    // Run git log to find deleted/modified secrets
+    const stdout = execSync('git log -p -U0 --no-color', { cwd: targetPath, maxBuffer: 15 * 1024 * 1024 }).toString();
+    const lines = stdout.split(/\r?\n/);
+    let currentCommit = '';
+    let currentFile = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('commit ')) {
+        currentCommit = line.split(' ')[1] || '';
+        continue;
+      }
+      if (line.startsWith('diff --git a/')) {
+        const match = line.match(/diff --git a\/(.*?) b\//);
+        if (match) currentFile = match[1] || '';
+        continue;
+      }
+      if (line.startsWith('-') && !line.startsWith('---')) {
+        const content = line.slice(1);
+        for (const pattern of PATTERNS) {
+          pattern.regex.lastIndex = 0;
+          let match: RegExpExecArray | null;
+          while ((match = pattern.regex.exec(content)) !== null) {
+            const raw = match[0];
+            if (raw.length < 8) continue;
+            const lower = raw.toLowerCase();
+            if (lower.includes('example') || lower.includes('placeholder') || lower.includes('your_') || lower.includes('testkey') || lower.includes('xxx')) {
+              continue;
+            }
+
+            const redacted = redactSecret(raw);
+            findings.push({
+              id: `VULN-${pattern.id}-GIT`,
+              patternId: pattern.id,
+              severity: pattern.severity,
+              cvss: pattern.cvss,
+              cvssVector: pattern.cvssVector,
+              file: `${currentFile} (Git Commit: ${currentCommit.slice(0, 8)})`,
+              line: 1, // Reference
+              column: match.index,
+              match: redacted,
+              fullMatch: raw,
+              description: `[GIT HISTORY LEAK] ${pattern.description}`,
+              remediation: `This secret was found in the Git repository history (commit ${currentCommit.slice(0, 8)}). Even if deleted from the current codebase, it remains exposed. Purge it using git-filter-repo or BFG Repo-Cleaner immediately.`,
+              owasp: pattern.owasp,
+              cwe: pattern.cwe,
+            });
+            if (match[0].length === 0) pattern.regex.lastIndex++;
+          }
+        }
+      }
+    }
+  } catch (e: any) {
+    // Fail silently if git commands are not supported or fail
+  }
+  return findings;
+}
+
 export function scanSecrets(targetPath: string, opts: ScanOptions = {}): SecretFinding[] {
   const ignore = [...DEFAULT_IGNORE, ...(opts.ignore || [])];
   const maxFileSize = opts.maxFileSizeBytes || 1_000_000; // 1MB
@@ -300,18 +366,29 @@ export function scanSecrets(targetPath: string, opts: ScanOptions = {}): SecretF
     throw new Error(`Target path not found: ${targetPath}`);
   }
 
+  // Load .cyberauditignore if exists in targetPath
+  const ignoreFilePath = join(targetPath, '.cyberauditignore');
+  const fileIgnoreRules: string[] = [];
+  if (existsSync(ignoreFilePath)) {
+    try {
+      const rules = readFileSync(ignoreFilePath, 'utf-8')
+        .split(/\r?\n/)
+        .map(r => r.trim())
+        .filter(r => r && !r.startsWith('#'));
+      fileIgnoreRules.push(...rules);
+    } catch {}
+  }
+
   const stat = statSync(targetPath);
   let files: string[] = [];
   if (stat.isFile()) {
     files = [targetPath];
   } else if (stat.isDirectory()) {
     files = walkDir(targetPath, ignore, maxFileSize);
-    // filter by extensions if provided
     if (extensions.length > 0) {
       files = files.filter(f => {
         const ext = extname(f).toLowerCase();
         const base = f.split('/').pop() || '';
-        // allow .env files regardless of ext logic
         if (base.startsWith('.env')) return true;
         return extensions.includes(ext) || extensions.includes(base);
       });
@@ -321,47 +398,35 @@ export function scanSecrets(targetPath: string, opts: ScanOptions = {}): SecretF
   const findings: SecretFinding[] = [];
 
   for (const file of files) {
-    // Skip huge .env.example? Allow
+    // Check .cyberauditignore matching for this file
+    const relFile = join(file);
+    if (fileIgnoreRules.some(rule => relFile.includes(rule))) {
+      continue;
+    }
+
     let content: string;
     try {
       content = readFileSync(file, 'utf-8');
     } catch {
       continue;
     }
-    // Quick skip if file too large after read
     if (content.length > maxFileSize) continue;
-
-    // Special handling for .env file detection
-    const baseName = file.split('/').pop() || '';
-    if (baseName === '.env' || baseName.startsWith('.env.')) {
-      // Check if .env is committed (should be finding INFO if in repo and contains secrets)
-      // But actual secret detection will still run via patterns
-    }
 
     const lines = content.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      // Skip long lines (minified)
       if (line.length > 2000) continue;
 
       for (const pattern of PATTERNS) {
-        // Optimization: quick pre-check for keywords to avoid regex on every line
-        // Not applied for generic high entropy to keep simple
-
-        // Reset regex lastIndex for global
         pattern.regex.lastIndex = 0;
         let match: RegExpExecArray | null;
         while ((match = pattern.regex.exec(line)) !== null) {
           const raw = match[0];
-          // Avoid duplicate findings same file+line+pattern+match
-          // Also skip obvious false positives
           if (raw.length < 8) continue;
-          // Skip example / placeholder
           const lower = raw.toLowerCase();
           if (lower.includes('example') || lower.includes('placeholder') || lower.includes('your_') || lower.includes('testkey') || lower.includes('xxx')) {
             continue;
           }
-          // Skip if in comment that says "example" and not CRITICAL (to reduce noise)
           if (line.toLowerCase().includes('example') && pattern.severity !== 'CRITICAL') {
             continue;
           }
@@ -385,11 +450,22 @@ export function scanSecrets(targetPath: string, opts: ScanOptions = {}): SecretF
             cwe: pattern.cwe,
           });
 
-          // Prevent infinite loop for zero-length matches
           if (match[0].length === 0) pattern.regex.lastIndex++;
         }
       }
     }
+  }
+
+  // Scan Git History as well for comprehensive Phase 2 secrets audit
+  if (stat.isDirectory()) {
+    try {
+      const gitFindings = scanGitHistory(targetPath);
+      // Filter out any git findings that are in ignored files
+      const filteredGit = gitFindings.filter(gf => {
+        return !fileIgnoreRules.some(rule => gf.file.includes(rule));
+      });
+      findings.push(...filteredGit);
+    } catch {}
   }
 
   // Deduplicate (file+line+patternId)
@@ -428,7 +504,7 @@ export function formatFindingsText(findings: SecretFinding[], target: string): s
   out += `Breakdown: ${Object.entries(bySeverity).map(([k,v]) => `${k}:${v}`).join(' ')}\n\n`;
   for (const f of findings) {
     const icon = f.severity === 'CRITICAL' ? '🔴' : f.severity === 'HIGH' ? '🟠' : f.severity === 'MEDIUM' ? '🟡' : f.severity === 'LOW' ? '🟢' : 'ℹ️';
-    out += `${icon} [${f.severity}] ${f.patternId} — ${f.file}:${f.line}\n`;
+    out += `${icon} [${f.severity}] ${f.patternId} — ${f.file}${f.line > 1 ? `:${f.line}` : ''}\n`;
     out += `   Match: ${f.match}\n`;
     out += `   CVSS: ${f.cvss} ${f.cvssVector}\n`;
     out += `   Fix: ${f.remediation.split('.')[0]}.\n\n`;

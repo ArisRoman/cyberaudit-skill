@@ -5,6 +5,25 @@ import { existsSync, mkdirSync, cpSync, readdirSync, writeFileSync, readFileSync
 import { homedir } from "os";
 import { join, dirname, resolve, relative } from "path";
 import { fileURLToPath } from "url";
+import { openSync, readSync, closeSync, statSync } from "fs";
+
+function isBinaryFile(path: string): boolean {
+  if (!existsSync(path)) return false;
+  const stat = statSync(path);
+  if (!stat.isFile()) return false;
+  const buffer = Buffer.alloc(512);
+  let fd;
+  try {
+    fd = openSync(path, 'r');
+    const bytesRead = readSync(fd, buffer, 0, 512, 0);
+    closeSync(fd);
+    for (let i = 0; i < bytesRead; i++) {
+      if (buffer[i] === 0) return true;
+    }
+  } catch { return false; }
+  return false;
+}
+
 import { startMcpServer as startMcpServerImpl } from "./mcp-server.js";
 import { scanSecrets, formatFindingsText } from "./scanners/secrets.js";
 import { scanWeb, formatWebFindingsText } from "./scanners/web.js";
@@ -196,16 +215,22 @@ function isSafeInsideCwd(p: string, cwd: string): boolean {
 }
 
 function isSafeSkillPath(p: string, mode: 'global' | 'local' = 'global', cwd = process.cwd()): boolean {
-  if (mode === 'local') {
-    return isSafeInsideCwd(p, cwd) && p.includes("cyberaudit");
+  const validPaths = new Set<string>();
+  for (const agentKey of Object.keys(AGENT_CONFIG) as Agent[]) {
+    const cfg = getPathsForMode(agentKey, mode, cwd);
+    cfg.skillPaths.forEach(sp => validPaths.add(resolve(sp)));
   }
-  return isSafeInsideHome(p) && p.includes("cyberaudit");
+  return validPaths.has(resolve(p));
 }
 
 function isSafeCommandPath(p: string, mode: 'global' | 'local' = 'global', cwd = process.cwd()): boolean {
-  const inside = mode === 'local' ? isSafeInsideCwd(p, cwd) : isSafeInsideHome(p);
-  if (!inside) return false;
-  return p.includes("commands") || p.includes("workflows") || p.includes("skills");
+  const validPaths = new Set<string>();
+  for (const agentKey of Object.keys(AGENT_CONFIG) as Agent[]) {
+    const cfg = getPathsForMode(agentKey, mode, cwd);
+    cfg.commandPaths.forEach(cp => validPaths.add(resolve(cp)));
+    if (cfg.workflowPaths) cfg.workflowPaths.forEach(wp => validPaths.add(resolve(wp)));
+  }
+  return validPaths.has(resolve(p));
 }
 
 function toLocalPath(globalPath: string, cwd: string): string {
@@ -338,6 +363,18 @@ function installCommands(commandFiles: string[], targetDir: string, dryRun: bool
       console.error(`  ✗ Failed to copy command ${fileName} to ${targetDir}: ${e.message}`);
     }
   }
+
+  // Copy shared directory so commands loading shared/... work
+  const sharedSrc = join(SKILL_SRC, "shared");
+  const sharedDst = join(targetDir, "shared");
+  if (existsSync(sharedSrc) && !dryRun) {
+    try {
+      if (existsSync(sharedDst)) rmSync(sharedDst, { recursive: true, force: true });
+      mkdirSync(dirname(sharedDst), { recursive: true });
+      cpSync(sharedSrc, sharedDst, { recursive: true });
+    } catch {}
+  }
+
   console.log(`  ✓ Commands (${commandFiles.length}) installed to ${agentName} (${targetDir}) [${mode}] — "/" will show ${commandFiles.length} main commands`);
 }
 
@@ -411,6 +448,9 @@ function installForCursor(dryRun: boolean, mode: 'global' | 'local' = 'global', 
 
   if (existsSync(mcpPath)) {
     try {
+      if (isBinaryFile(mcpPath)) {
+        throw new Error("File is binary (corrupted)");
+      }
       const raw = readFileSync(mcpPath, "utf-8");
       if (raw.trim().length > 0) mcpConfig = JSON.parse(raw);
     } catch (e: any) {
@@ -575,6 +615,162 @@ async function main() {
       }
       console.log(`\nMain "/" commands: ${MAIN_COMMANDS.map(f=>f.replace('.md','')).join(', ')} [${mode}]`);
       console.log(`Total commands available: ${readdirSync(COMMANDS_SRC).length} (8 main shown on "/")\n`);
+    });
+
+  program
+    .command("uninstall")
+    .description("Uninstall CyberAudit Skill")
+    .option("-a, --agent <agent>", "Target agent or all", "all")
+    .option("--global", "Uninstall globally", false)
+    .option("--local", "Uninstall locally", false)
+    .action((options) => {
+      const dryRun = false;
+      const agentOpt = (options.agent || "all").toLowerCase();
+      let mode: 'global' | 'local' = 'global';
+      if (options.local) mode = 'local';
+      else if (options.global) mode = 'global';
+      const cwd = process.cwd();
+      const agents = agentOpt === "all" ? (Object.keys(AGENT_CONFIG) as Agent[]) : [agentOpt as Agent];
+      
+      console.log(`\n═══ CyberAudit Uninstall — ${agents.length} agents [${mode}] ═══\n`);
+      for (const agent of agents) {
+        const cfg = getPathsForMode(agent, mode, cwd);
+        console.log(`→ Uninstalling ${cfg.displayName} [${mode}]...`);
+        let uninstalled = false;
+        
+        for (const sp of cfg.skillPaths) {
+          if (existsSync(sp)) {
+            rmSync(sp, { recursive: true, force: true });
+            console.log(`  ✓ Removed skill dir: ${sp}`);
+            uninstalled = true;
+          }
+        }
+        
+        for (const cp of cfg.commandPaths) {
+          if (existsSync(cp)) {
+            try {
+              const files = readdirSync(cp).filter(f => f.startsWith('audit') || f === 'shared');
+              for (const f of files) {
+                const p = join(cp, f);
+                if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true });
+                else unlinkSync(p);
+              }
+              console.log(`  ✓ Removed commands from: ${cp}`);
+              uninstalled = true;
+            } catch {}
+          }
+        }
+
+        if (cfg.workflowPaths) {
+          for (const wp of cfg.workflowPaths) {
+            if (existsSync(wp)) {
+              try {
+                const files = readdirSync(wp).filter(f => f.startsWith('audit') || f === 'shared');
+                for (const f of files) {
+                  const p = join(wp, f);
+                  if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true });
+                  else unlinkSync(p);
+                }
+                console.log(`  ✓ Removed workflows from: ${wp}`);
+                uninstalled = true;
+              } catch {}
+            }
+          }
+        }
+
+        if (cfg.mcpPath && existsSync(cfg.mcpPath)) {
+          try {
+            if (isBinaryFile(cfg.mcpPath)) throw new Error("Binary mcp.json");
+            const raw = readFileSync(cfg.mcpPath, 'utf-8');
+            const parsed = JSON.parse(raw);
+            if (parsed.mcpServers?.["cyberaudit-skill"]) {
+              delete parsed.mcpServers["cyberaudit-skill"];
+              copyFileSync(cfg.mcpPath, `${cfg.mcpPath}.bak`);
+              writeFileSync(cfg.mcpPath, JSON.stringify(parsed, null, 2));
+              console.log(`  ✓ Removed MCP config from: ${cfg.mcpPath}`);
+              uninstalled = true;
+            }
+          } catch (e: any) {
+            console.error(`  ✗ Failed to update mcp.json: ${e.message}`);
+          }
+        }
+        
+        if (!uninstalled) console.log(`  ~ Nothing to uninstall.`);
+      }
+      console.log(`\nDone.`);
+    });
+
+  program
+    .command("doctor")
+    .description("Check CyberAudit Skill installation status and environment health")
+    .option("--local", "Check locally (project)", false)
+    .action((options) => {
+      let mode: 'global' | 'local' = options.local ? 'local' : 'global';
+      const cwd = process.cwd();
+      console.log(`\n═══ CyberAudit Doctor 🩺 [${mode}] ═══\n`);
+      
+      let healthy = true;
+      console.log("Environment:");
+      try {
+        const nodeVer = process.version;
+        console.log(`  ✓ Node.js: ${nodeVer}`);
+      } catch {
+        console.log(`  ✗ Node.js check failed`);
+        healthy = false;
+      }
+      
+      console.log("\nSkill Source:");
+      if (existsSync(SKILL_SRC)) {
+        console.log(`  ✓ Found: ${SKILL_SRC}`);
+        const sharedSrc = join(SKILL_SRC, 'shared');
+        if (existsSync(sharedSrc)) console.log(`  ✓ Shared logic: Present`);
+        else { console.log(`  ✗ Shared logic: Missing`); healthy = false; }
+      } else {
+        console.log(`  ✗ Missing: ${SKILL_SRC}`);
+        healthy = false;
+      }
+
+      console.log("\nInstallation Status:");
+      let installedCount = 0;
+      for (const [agentKey, _] of Object.entries(AGENT_CONFIG) as [Agent, any][]) {
+        const cfg = getPathsForMode(agentKey, mode, cwd);
+        let status = [];
+        
+        for (const sp of cfg.skillPaths) {
+          if (existsSync(sp)) status.push("Skill Dir ✓");
+        }
+        
+        let cmdCount = 0;
+        for (const cp of cfg.commandPaths) {
+          if (existsSync(cp)) {
+            try {
+              cmdCount += readdirSync(cp).filter(f => f.startsWith('audit') && f.endsWith('.md')).length;
+              if (existsSync(join(cp, 'shared'))) status.push("Commands Shared ✓");
+            } catch {}
+          }
+        }
+        if (cmdCount > 0) status.push(`Commands (${cmdCount}) ✓`);
+
+        if (cfg.mcpPath && existsSync(cfg.mcpPath)) {
+          try {
+            if (!isBinaryFile(cfg.mcpPath)) {
+              const raw = readFileSync(cfg.mcpPath, 'utf-8');
+              if (raw.includes('cyberaudit-skill')) status.push("MCP Config ✓");
+            } else {
+              status.push("MCP Config ✗ (Binary Corrupted)");
+              healthy = false;
+            }
+          } catch {}
+        }
+
+        if (status.length > 0) {
+          console.log(`  ${cfg.displayName}: ${status.join(', ')}`);
+          installedCount++;
+        }
+      }
+      if (installedCount === 0) console.log(`  No agents installed in [${mode}] mode.`);
+      
+      console.log(`\nSummary: ${healthy ? "✅ Healthy" : "❌ Issues Detected"}`);
     });
 
   program

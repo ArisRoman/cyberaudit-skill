@@ -50,7 +50,44 @@ describe('MCP Server', () => {
     expect(toolNames).toContain('cyberaudit-web');
     expect(toolNames).toContain('cyberaudit-cloud');
     expect(toolNames).toContain('cyberaudit-quick');
-    expect(toolNames.length).toBeGreaterThanOrEqual(6);
+    expect(toolNames).toContain('cyberaudit-get-scope');
+    expect(toolNames).toContain('cyberaudit-get-reference');
+    expect(toolNames.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('should handle get-scope tool call', async () => {
+    const { stdout } = await runMcp([
+      JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }),
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'cyberaudit-get-scope', arguments: { target: '.' } },
+      }),
+    ]);
+    const lines = stdout.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    const callResp = lines.find(r => r.id === 2);
+    expect(callResp).toBeDefined();
+    const text = callResp.result.content[0].text;
+    expect(text).toContain('Scope Analyzer');
+    expect(text).toContain('High-Risk Files');
+  });
+
+  it('should handle get-reference tool call', async () => {
+    const { stdout } = await runMcp([
+      JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }),
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'cyberaudit-get-reference', arguments: { topic: 'web-sqli' } },
+      }),
+    ]);
+    const lines = stdout.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    const callResp = lines.find(r => r.id === 2);
+    expect(callResp).toBeDefined();
+    const text = callResp.result.content[0].text;
+    expect(text).toContain('Condensed Security Reference');
   });
 
   it('should handle cloud tool call', async () => {

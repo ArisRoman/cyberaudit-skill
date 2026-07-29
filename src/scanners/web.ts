@@ -223,6 +223,54 @@ const WEB_PATTERNS: WebPattern[] = [
     owasp: 'A05:2021',
     cwe: 'CWE-215',
   },
+  {
+    id: 'WEB_OPEN_REDIRECT',
+    name: 'Open Redirect via user input in redirect',
+    regex: /res\.redirect\s*\(\s*req\.(?:query|body|params)\b/gi,
+    severity: 'MEDIUM',
+    cvss: 6.1,
+    cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N',
+    description: 'Potential open redirect vulnerability. Passing raw user input directly to res.redirect() allows attacker to redirect users to malicious domains.',
+    remediation: 'Validate redirect URLs against an allowlist of trusted domains, or only allow relative URLs.',
+    owasp: 'A01:2021 — Broken Access Control',
+    cwe: 'CWE-601',
+  },
+  {
+    id: 'WEB_PATH_TRAVERSAL',
+    name: 'Path Traversal via file system operations',
+    regex: /fs\.(?:readFile|writeFile|createReadStream|createWriteStream)\s*\(\s*.*req\.(?:query|body|params)/gi,
+    severity: 'HIGH',
+    cvss: 7.5,
+    cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N',
+    description: 'Potential path traversal vulnerability. Reading or writing files with raw user input allows directory escape.',
+    remediation: 'Sanitize file paths with path.resolve() or use path.basename() to enforce filename only. Validate directory whitelists.',
+    owasp: 'A01:2021 — Broken Access Control',
+    cwe: 'CWE-22',
+  },
+  {
+    id: 'WEB_XXE',
+    name: 'XML External Entity (XXE) Processing',
+    regex: /(?:xml2js|libxmljs|parseString)(?:\.[a-z0-9]+)?\s*\(\s*.*req\.(?:query|body|params)/gi,
+    severity: 'HIGH',
+    cvss: 8.2,
+    cvssVector: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N',
+    description: 'Potential XML External Entity (XXE) injection. Processing untrusted XML input can lead to internal file disclosure or SSRF.',
+    remediation: 'Disable external entity loading (DTD) explicitly when parsing XML. Ensure parser is configured safely.',
+    owasp: 'A05:2021 — Security Misconfiguration',
+    cwe: 'CWE-611',
+  },
+  {
+    id: 'WEB_SSRF',
+    name: 'Server-Side Request Forgery (SSRF)',
+    regex: /(?:axios|fetch|request|http\.get|https\.get)(?:\.[a-z0-9]+)?\s*\(\s*.*req\.(?:query|body|params)/gi,
+    severity: 'HIGH',
+    cvss: 8.6,
+    cvssVector: 'CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:N',
+    description: 'Potential Server-Side Request Forgery (SSRF). Making HTTP requests to user-controlled URLs allows scanning of internal networks.',
+    remediation: 'Avoid letting users specify URLs. If necessary, use a strict domain whitelist, validate resolve IPs, and block cloud metadata addresses.',
+    owasp: 'A10:2021 — Server-Side Request Forgery (SSRF)',
+    cwe: 'CWE-918',
+  },
 ];
 
 export function scanWeb(targetPath: string): WebFinding[] {
@@ -247,23 +295,19 @@ export function scanWeb(targetPath: string): WebFinding[] {
       if (pattern.extensions && pattern.extensions.length > 0) {
         const ext = file.slice(file.lastIndexOf('.')).toLowerCase();
         if (!pattern.extensions.includes(ext) && !pattern.extensions.some(e => file.endsWith(e))) {
-          // allow if file contains mustContain anyway? Skip strict
           if (!pattern.mustContain) continue;
         }
       }
       // mustContain filter
       if (pattern.mustContain && !pattern.mustContain.some(k => content.includes(k))) continue;
-      // false positive mitigation present
+      // false positive mitigation present (entire file-level check)
       if (pattern.falsePositiveIfContains && pattern.falsePositiveIfContains.some(k => content.includes(k))) {
-        // For some patterns, we still want to report if mitigation not on same line? For simplicity skip file-level
-        // But for line-level, we check per line later; here we skip only for fileRegex patterns
         if (pattern.fileRegex) continue;
       }
 
       if (pattern.fileRegex) {
         pattern.fileRegex.lastIndex = 0;
         if (pattern.fileRegex.test(content)) {
-          // Find line of first match for file-level
           const match = content.match(pattern.fileRegex);
           let lineNum = 1;
           if (match && match.index !== undefined) {
@@ -298,11 +342,17 @@ export function scanWeb(targetPath: string): WebFinding[] {
         while ((m = pattern.regex.exec(line)) !== null) {
           const raw = m[0];
           if (raw.length < 4) continue;
-          // Skip if mitigation on same line
-          if (pattern.falsePositiveIfContains && pattern.falsePositiveIfContains.some(k => line.includes(k))) {
-            // if mitigation present on same line, skip
-            continue;
+          
+          // Enhanced context false positive check (looks at +/- 5 lines context)
+          if (pattern.falsePositiveIfContains) {
+            const startContext = Math.max(0, i - 5);
+            const endContext = Math.min(lines.length - 1, i + 5);
+            const contextText = lines.slice(startContext, endContext + 1).join('\n');
+            if (pattern.falsePositiveIfContains.some(k => contextText.includes(k))) {
+              continue; // skip finding: mitigation detected in surrounding context
+            }
           }
+
           findings.push({
             id: `VULN-${pattern.id}`,
             patternId: pattern.id,

@@ -84,6 +84,14 @@ describe('Secrets Scanner', () => {
     expect(findings.length).toBe(0);
   });
 
+  it('should ignore files matching .cyberauditignore patterns', () => {
+    const key = buildSecret(['AKIA', '1234567890ABCDEF']);
+    writeFileSync(join(tmp, 'ignored.js'), `const key = "${key}";`);
+    writeFileSync(join(tmp, '.cyberauditignore'), `ignored.js`);
+    const findings = scanSecrets(tmp);
+    expect(findings.length).toBe(0);
+  });
+
   it('should sort by severity CRITICAL first', () => {
     const key = buildSecret(['AKIA', '1234567890ABCDEF']);
     writeFileSync(join(tmp, 'mixed.js'), `
